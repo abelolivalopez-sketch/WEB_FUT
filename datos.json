@@ -66,10 +66,10 @@
     },
     {
       "id": "ej-canal",
-      "nombre": "Olympique Canal",
-      "sigla": "OCA",
+      "nombre": "L'Olympresque",
+      "sigla": "OLY",
       "color": "#0E7490",
-      "logo": "",
+      "logo": "img/equipos/8fe874cb-871d-481d-b2d4-6f46374cde13.webp",
       "foto": ""
     },
     {
@@ -101,7 +101,7 @@
       "nombre": "Enfants du 9",
       "sigla": "EF9",
       "color": "#B3BF18",
-      "logo": "img/equipos/7d1ef636-5d47-4d8a-a1fc-cdb57ae68220.webp",
+      "logo": "img/equipos/320cee20-da91-41d2-854d-64d03dfee024.webp",
       "foto": ""
     }
   ],
@@ -350,13 +350,13 @@
       "id": "66b12bce-a974-407a-8945-4977470f3436",
       "nombre": "Augustin NeuNeu",
       "puesto": "",
-      "foto": "img/jugadores/437f5073-005d-4100-ae9a-dd7c89bc76ec.webp"
+      "foto": "img/jugadores/81b0db12-a4ca-4f91-84d1-5105c70f0d21.webp"
     },
     {
       "id": "ca06651c-1478-458e-be00-b76ae808df58",
       "nombre": "Max",
       "puesto": "",
-      "foto": "img/jugadores/42630392-10ea-46df-9a86-0a362a158d9b.webp"
+      "foto": "img/jugadores/e440bba1-70b6-4336-9c2b-737f679907ff.webp"
     }
   ],
   "inscripciones": [
