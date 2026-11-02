@@ -372,7 +372,7 @@ function equipos(ctx) {
       </a>`;
     }).join("");
   return `<div class="contenedor pila">
-    ${paginaCabeza(ctx, "Équipes", "Le classement de la saison, les effectifs de chaque équipe et les meilleurs joueurs.", ctx.creador ? `<div class="acciones-creador">${btnCreador("nuevo-equipo", "Inscrire une équipe")}</div>` : "")}
+    ${paginaCabeza(ctx, "Classement", "Le classement de la saison, les effectifs de chaque équipe et les meilleurs joueurs.", ctx.creador ? `<div class="acciones-creador">${btnCreador("nuevo-equipo", "Inscrire une équipe")}</div>` : "")}
     <section class="seccion" aria-labelledby="t-clasif">
       <div class="seccion-cabeza"><h2 id="t-clasif">Classement</h2></div>
       ${tablaClasificacion(ctx)}
