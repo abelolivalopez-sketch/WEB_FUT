@@ -228,9 +228,9 @@
     },
     {
       "id": "ej-canal-3",
-      "nombre": "Jules P.",
+      "nombre": "Pitu",
       "puesto": "Milieu",
-      "foto": ""
+      "foto": "img/jugadores/46d9b56d-8d6c-40ba-bd3a-0fc1a3de1330.webp"
     },
     {
       "id": "ej-canal-4",
@@ -885,7 +885,7 @@
       "temporada": "ej-saison-5",
       "equipo": "ej-canal",
       "jugador": "ej-canal-3",
-      "numero": 6,
+      "numero": 17,
       "capitan": false
     },
     {
