@@ -3736,7 +3736,16 @@
       "enlace": ""
     }
   ],
-  "videos": [],
+  "videos": [
+    {
+      "id": "c7e7bec6-1ea4-4320-b8c7-5f4d6cf9c25d",
+      "temporada": "ej-saison-5",
+      "titulo": "Récap journee 5",
+      "youtube": "qNU7s5n7yd0",
+      "fecha": "2026-11-02",
+      "partido": "ej-saison-5-j2-3"
+    }
+  ],
   "premios": [
     {
       "id": "ej-premio-1",
