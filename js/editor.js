@@ -702,6 +702,14 @@ function abrirDatos(api) {
   abrir(`<div class="formulario">
     <header class="dialogo-cabeza"><h2>Données de la ligue</h2>${CERRAR}</header>
     <div class="dialogo-cuerpo datos-lista">
+      ${local ? `<div class="datos-opcion datos-publicar">
+        <div><h3>Publier sur le site</h3><p>Télécharge le fichier datos.json avec tout le contenu actuel. Remplace ce fichier à la racine du dépôt GitHub : une à deux minutes après, tout le monde voit ces données.</p></div>
+        <button type="button" class="btn btn-principal" data-datos="publicar">Télécharger datos.json</button>
+      </div>` : ""}
+      ${local && api.apartado() ? `<div class="datos-opcion">
+        <div><h3>Modifications mises de côté</h3><p>Une nouvelle version publiée a remplacé ce que tu avais modifié dans ce navigateur le ${esc(new Date(api.apartado()).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" }))}. Tu peux le récupérer.</p></div>
+        <button type="button" class="btn btn-secundario" data-datos="recuperar">Récupérer</button>
+      </div>` : ""}
       <div class="datos-opcion">
         <div><h3>Sauvegarde</h3><p>Télécharge toute la ligue dans un fichier : saisons, équipes, joueurs, matchs, notes, lives, vidéos, prix et textes.</p></div>
         <button type="button" class="btn btn-secundario" data-datos="exportar">Télécharger</button>
@@ -721,6 +729,8 @@ function abrirDatos(api) {
     </div>
   </div>`);
   dialogo.querySelector('[data-datos="exportar"]').addEventListener("click", () => api.exportar());
+  dialogo.querySelector('[data-datos="publicar"]')?.addEventListener("click", () => api.publicar());
+  dialogo.querySelector('[data-datos="recuperar"]')?.addEventListener("click", () => api.recuperarApartado());
   dialogo.querySelector("#importar-archivo").addEventListener("change", (e) => {
     const archivo = e.target.files[0];
     if (archivo) api.importar(archivo);
