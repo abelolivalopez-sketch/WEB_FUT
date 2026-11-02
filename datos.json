@@ -222,9 +222,9 @@
     },
     {
       "id": "ej-canal-2",
-      "nombre": "Mehdi Z.",
+      "nombre": "Thomas",
       "puesto": "Défenseur",
-      "foto": ""
+      "foto": "img/jugadores/18834957-2db5-45be-8853-c304da2a8b80.webp"
     },
     {
       "id": "ej-canal-3",
@@ -877,7 +877,7 @@
       "temporada": "ej-saison-5",
       "equipo": "ej-canal",
       "jugador": "ej-canal-2",
-      "numero": 4,
+      "numero": 0,
       "capitan": false
     },
     {
