@@ -5,7 +5,7 @@ import { normalizar, clasificacion, estadisticas, rankingJugadores, mejoresJugad
 import { crearEjemplo } from "./ejemplo.js";
 
 const RUTAS = ["inicio", "calendrier", "equipes", "joueurs", "videos", "palmares", "confidentialite", "createur"];
-const TITULOS = { inicio: "", calendrier: "Calendrier", equipes: "Équipes", joueurs: "Joueurs", videos: "Vidéos", palmares: "Palmarès", confidentialite: "Politique de confidentialité", createur: "Espace créateur" };
+const TITULOS = { inicio: "", calendrier: "Calendrier", equipes: "Classement", joueurs: "Joueurs", videos: "Vidéos", palmares: "Palmarès", confidentialite: "Politique de confidentialité", createur: "Espace créateur" };
 const CLAVE_PUBLICO = "ligue-s:vista-publica";
 const CLAVE_VISTA_LOCAL = "ligue-s:vista";
 
