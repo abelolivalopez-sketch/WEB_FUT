@@ -56,4 +56,14 @@ async function dataUrlABlob(url) {
   return respuesta.blob();
 }
 
-export { reducirImagen, blobADataUrl, dataUrlABlob };
+let resolver = (url) => url;
+
+function usarResolver(funcion) {
+  resolver = funcion;
+}
+
+function fuenteImagen(url) {
+  return resolver(url);
+}
+
+export { reducirImagen, blobADataUrl, dataUrlABlob, usarResolver, fuenteImagen };

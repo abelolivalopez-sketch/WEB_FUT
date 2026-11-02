@@ -37,7 +37,9 @@ Un equipo o un jugador que vuelve otra temporada es el mismo: conserva su ficha,
 | Archivo | Qué hace |
 | --- | --- |
 | `index.html` | Página única; las secciones van por `#inicio`, `#calendrier`, `#equipes`, `#equipe-…`, `#joueurs`, `#joueur-…`, `#videos`, `#palmares`, `#confidentialite` y `#createur`. |
-| `config.js` | Dirección y clave pública de Supabase. Vacíos = modo local. |
+| `config.js` | Dónde se guardan los datos: repositorio de GitHub (ahora), Supabase o solo el navegador. |
+| `datos.json` | Los datos de la liga. Lo escribe la web al guardar; no hay que tocarlo a mano. |
+| `img/` | Fotos y logos subidos desde la web. |
 | `logo.svg` | Logo oficial de la Ligue S en vector (azul `#1D418F` y blanco), redibujado a partir del JPG oficial. |
 | `icono.svg` | Icono de la pestaña del navegador. |
 | `estilo.css` | Todo el diseño, con modo claro y oscuro. |
@@ -46,30 +48,54 @@ Un equipo o un jugador que vuelve otra temporada es el mismo: conserva su ficha,
 | `js/editor.js` | Formularios del modo creador (hoja de partido, temporadas, premios…). |
 | `js/logica.js` | Limpieza de datos, clasificación, notas, medias, podio, historiales, calendario y fechas en francés. |
 | `js/sincronizar.js` | Calcula qué filas han cambiado para mandar a Supabase solo eso. |
-| `js/almacen.js` | Guarda en el navegador (modo local) o en Supabase (modo en línea). |
+| `js/github.js` | Lee y guarda `datos.json` y las fotos en el repositorio con la API de GitHub (un commit por guardado). |
+| `js/almacen.js` | Guarda en el repositorio, en Supabase o en el navegador, según `config.js`. |
 | `js/imagen.js` | Reduce las fotos antes de guardarlas (mantiene la transparencia de los PNG recortados). |
 | `js/ejemplo.js` | Las dos temporadas de ejemplo del modo local. |
 | `supabase/ligue-s.sql` | Tablas, permisos, funciones y almacén de fotos para el modo en línea. |
 | `docs/GUIDE.md` | Guía en francés para Tom. |
 
-## Dos modos
+## Cómo se guardan los datos
 
-**Modo prototipo (ahora, sin base de datos).** Con `config.js` vacío, los cambios se hacen en el navegador y se publican con un archivo del repositorio:
+`config.js` decide dónde se guarda todo:
 
-1. En tu ordenador, abre la web (la de GitHub o con Live Server) y entra en modo creador.
-2. Mete equipos, jugadores, fotos, partidos, notas, etc. Mientras no publiques, todo se queda solo en tu navegador.
-3. «Données › Publier sur le site» descarga `datos.json` con todo el contenido.
-4. Sube ese `datos.json` a la raíz del repositorio (*Add file › Upload files*, reemplaza el anterior).
-5. En uno o dos minutos, cualquiera que abra la web ve esos datos, en la vista pública.
+```js
+window.LIGUE_S = {
+  supabaseUrl: "",
+  supabaseClave: "",
+  github: { usuario: "abelolivalopez-sketch", repositorio: "WEB_FUT", rama: "main" }
+};
+```
 
-Detalles:
-- Sin `datos.json` en el repositorio, la web enseña las dos temporadas de ejemplo.
-- Quien abre la web puede probar el modo creador con el botón de abajo a la derecha. Lo que cambie se queda en su navegador hasta que publiques una versión nueva. Entonces se le cambia por la nueva y sus pruebas quedan apartadas en «Données», por si las quiere recuperar.
-- Si exportas y aún no has subido el archivo, tu navegador conserva tus cambios.
-- Las fotos van dentro de `datos.json` (reducidas a 480 px). Con muchas fotos el archivo pesa varios MB, pero GitHub admite hasta 25 MB por archivo.
-- Al subir una versión nueva del código, no hace falta tocar `datos.json`: el zip no lo trae.
+**En el repositorio (ahora).** Con `github` relleno y Supabase vacío, los datos viven en el propio repositorio:
 
-**Modo en línea (cuando Tom la valide).** Con Supabase configurado, la gente ve la web sin herramientas y Tom entra por «Espace créateur» (pie de página, o `#createur`) con su correo y contraseña. Solo los correos de la tabla `creadores` pueden cambiar algo. El `datos.json` del prototipo se pasa con «Données › Importer» (las fotos se suben solas a Supabase) y después se puede borrar del repositorio.
+- `datos.json` en la raíz con equipos, jugadores, partidos, notas, temporadas, premios y textos.
+- Las fotos y logos como archivos en `img/jugadores/`, `img/equipos/` e `img/sitio/`.
+- El público lee esos archivos. No ve ningún botón del modo creador ni enlace al espacio creador.
+- Para editar se entra por `…/WEB_FUT/#createur` con una **llave de GitHub** (ver abajo). Sin la llave nadie puede guardar nada, aunque conozca la dirección.
+- Cada vez que se guarda algo, la web hace un commit en `main` («Ligue S : Joueur ajouté», etc.) con `datos.json` y las fotos nuevas. Las fotos que se cambian o se quitan se borran del repositorio en ese mismo commit.
+- Quien edita ve el cambio al instante. El público lo ve cuando GitHub Pages termina de publicar, en uno o dos minutos.
+- Todo queda en el historial del repositorio: para deshacer un cambio basta con revertir su commit en GitHub.
+- Si `datos.json` cambia por otro lado mientras alguien edita (otro aparato, o una subida a mano), la web no lo pisa: avisa y pide recargar. Los cambios de código no molestan.
+
+La primera vez que se entra con la llave en un navegador que ya tenía datos guardados de antes (el modo local), la web los enseña con el aviso «Ces données sont seulement dans ce navigateur» y el botón «Enregistrer sur GitHub», que los sube con sus fotos.
+
+**Solo en el navegador.** Si en `config.js` se quita `github`, la web vuelve al modo local: cada navegador guarda lo suyo y se publica a mano con «Données › Publier sur le site» y subiendo `datos.json`.
+
+**Supabase (opcional, más adelante).** Con `supabaseUrl` y `supabaseClave` rellenos manda Supabase: login con correo y contraseña y cambios al instante para todos. Los pasos están más abajo. El `datos.json` se pasa con «Données › Importer».
+
+## La llave de GitHub
+
+1. En GitHub: foto de perfil › *Settings › Developer settings › Personal access tokens › Fine-grained tokens › Generate new token*, o directamente https://github.com/settings/personal-access-tokens/new
+2. Nombre: «Ligue S». Caducidad: la que quieras (cuando caduque, se crea otra igual).
+3. *Repository access*: *Only select repositories* › `WEB_FUT`.
+4. *Permissions › Repository permissions › Contents*: **Read and write**. No hace falta nada más.
+5. *Generate token* y copiarla (empieza por `github_pat_`). GitHub no la vuelve a enseñar.
+6. Abrir `https://abelolivalopez-sketch.github.io/WEB_FUT/#createur`, pegarla y «Se connecter». Se queda guardada en ese navegador hasta pulsar «Se déconnecter».
+
+La llave solo sirve para este repositorio. Si se pierde o alguien la ve, se borra en la misma página de GitHub y se crea otra.
+
+**Para pasársela a Tom.** Una llave *fine-grained* solo puede tocar repositorios de la cuenta que la crea. Lo más limpio es transferir el repositorio a la cuenta de Tom (*Settings › General › Transfer ownership*), cambiar `usuario` en `config.js` y que él cree su propia llave. La dirección de la web pasará a ser `https://<cuenta-de-tom>.github.io/WEB_FUT/`.
 
 ## Ponerla en GitHub
 
