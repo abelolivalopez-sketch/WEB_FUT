@@ -357,6 +357,12 @@
       "nombre": "Max",
       "puesto": "",
       "foto": "img/jugadores/e440bba1-70b6-4336-9c2b-737f679907ff.webp"
+    },
+    {
+      "id": "a23aa7e4-73dd-4a9d-b97e-500b4bfb837e",
+      "nombre": "Martin",
+      "puesto": "Attaquant",
+      "foto": "img/jugadores/cb48b6cf-c3a9-41c1-80f6-2bbbea7c05e6.webp"
     }
   ],
   "inscripciones": [
@@ -1023,6 +1029,14 @@
       "jugador": "ca06651c-1478-458e-be00-b76ae808df58",
       "numero": 7,
       "capitan": true
+    },
+    {
+      "id": "4d0fd315-21bd-4d3a-bd23-6ba49136b454",
+      "temporada": "ej-saison-5",
+      "equipo": "3eaecd06-1751-4be5-a440-489ac6c2ff69",
+      "jugador": "a23aa7e4-73dd-4a9d-b97e-500b4bfb837e",
+      "numero": 0,
+      "capitan": false
     }
   ],
   "partidos": [
