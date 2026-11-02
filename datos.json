@@ -1444,6 +1444,17 @@
       "jornada": "Journée 5",
       "lugar": "Terrain 1",
       "goles": null
+    },
+    {
+      "id": "e5ffdb83-6def-481c-94de-06b67cfe1d0e",
+      "temporada": "ej-saison-5",
+      "fecha": "2026-10-01",
+      "hora": "19:00",
+      "local": "3eaecd06-1751-4be5-a440-489ac6c2ff69",
+      "visitante": "ej-dynamo",
+      "jornada": "Journée 2",
+      "lugar": "Terrain 1",
+      "goles": null
     }
   ],
   "actuaciones": [
