@@ -61,6 +61,14 @@ function escribirSesion(clave, valor) {
   }
 }
 
+function enlaceCreador() {
+  return new URLSearchParams(location.search).has("createur");
+}
+
+function irAlEnlaceCreador() {
+  location.replace(`${location.pathname}?createur#createur`);
+}
+
 function ruta() {
   const h = decodeURIComponent(location.hash.slice(1));
   if (h.startsWith("equipe-")) return { nombre: "equipe", id: h.slice(7) };
@@ -149,6 +157,10 @@ function pintar() {
 
 function alCambiarRuta() {
   const r = ruta();
+  if (r.nombre === "createur" && almacen.modo !== "local" && !enlaceCreador()) {
+    irAlEnlaceCreador();
+    return;
+  }
   if (r.nombre === "createur" && estado.puedeEditar) {
     activarCreador(true);
     location.replace("#inicio");
@@ -408,16 +420,7 @@ function verTemporada(id) {
 
 async function salir() {
   await almacen.salir();
-  if (almacen.modo === "repo") {
-    location.hash = "#inicio";
-    location.reload();
-    return;
-  }
-  estado.puedeEditar = false;
-  estado.creador = false;
-  estado.usuario = null;
-  pintar();
-  avisar("Tu es déconnecté");
+  location.replace(`${location.pathname}#inicio`);
 }
 
 const api = {
@@ -551,6 +554,11 @@ function ocultarMiniaturaRota(evento) {
 }
 
 async function arrancar() {
+  const sesion = almacen.modo === "local" || enlaceCreador();
+  if (!sesion && ruta().nombre === "createur") {
+    irAlEnlaceCreador();
+    return;
+  }
   editor.prepararDialogo();
   document.addEventListener("click", alPulsar);
   document.addEventListener("change", alCambiar);
@@ -560,7 +568,7 @@ async function arrancar() {
   pintar();
   let carga;
   try {
-    carga = await almacen.cargar();
+    carga = await almacen.cargar(sesion);
     const { datos, sinConexion } = carga;
     estado.sinConexion = sinConexion;
     const viejoEjemplo = datos && datos.ejemplo && (Number(datos.esquema) || 1) < 3;
@@ -576,7 +584,7 @@ async function arrancar() {
   } else if (almacen.modo === "repo") {
     estado.puedeEditar = Boolean(carga.editor);
     estado.usuario = estado.puedeEditar ? await almacen.usuario() : null;
-  } else {
+  } else if (sesion) {
     try {
       estado.usuario = await almacen.usuario();
       estado.puedeEditar = Boolean(estado.usuario) && (await almacen.esCreador());
@@ -599,6 +607,7 @@ async function arrancar() {
     estado.creador = estado.puedeEditar && leerSesion(CLAVE_PUBLICO) !== "1";
   }
   if (ruta().nombre === "createur" && estado.puedeEditar) location.replace("#inicio");
+  if (sesion && !estado.puedeEditar && !location.hash) location.replace("#createur");
   pintar();
   if (carga.llaveCaducada) avisar("Ta clé GitHub n'est plus valable. Reconnecte-toi depuis l'espace créateur.", "error");
   if (carga.apartado) avisar("Le site a été mis à jour. Tes modifications non publiées sont gardées dans « Données ».", "ok", { texto: "Voir", alPulsar: () => editor.abrirDatos(api) });

@@ -106,8 +106,8 @@ function activarResolver() {
   usarResolver((u) => (typeof u === "string" && RUTA_IMAGEN.test(u) ? github.urlCruda(u) : u));
 }
 
-async function cargarRepo() {
-  const llave = leerTexto(CLAVE_LLAVE);
+async function cargarRepo(conLlave) {
+  const llave = conLlave ? leerTexto(CLAVE_LLAVE) : null;
   if (llave) {
     github.usarLlave(llave);
     try {
@@ -161,9 +161,9 @@ async function conectar() {
   return cliente;
 }
 
-async function cargar() {
+async function cargar(conLlave = true) {
   if (modo === "local") return cargarLocal();
-  if (modo === "repo") return cargarRepo();
+  if (modo === "repo") return cargarRepo(conLlave);
   try {
     const sb = await conectar();
     const { data, error: fallo } = await sb.rpc("leer_ligue");

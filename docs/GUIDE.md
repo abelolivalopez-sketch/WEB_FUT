@@ -4,16 +4,23 @@ Tout se modifie directement sur le site. Les boutons bleus en pointillés n'appa
 
 ## Se connecter
 
-Le mode créateur n'apparaît pas sur le site public. Pour modifier :
+Le site a deux adresses :
 
-1. Ouvre l'adresse du site suivie de `#createur` (par exemple `…/WEB_FUT/#createur`).
+- **L'adresse normale** (par exemple `…/WEB_FUT/`) : le site public. C'est celle à partager. Elle montre toujours la version publique, même sur ton ordinateur.
+- **L'adresse créateur** : la même suivie de `?createur` (par exemple `…/WEB_FUT/?createur`). Garde-la dans tes favoris.
+
+La première fois sur un appareil :
+
+1. Ouvre l'adresse créateur.
 2. Colle ta clé d'accès GitHub et clique sur « Se connecter ». La clé reste enregistrée dans ce navigateur.
-3. La barre bleue « Mode créateur » apparaît en haut.
+3. La barre bleue « Mode créateur » apparaît en haut. Les fois suivantes, l'adresse créateur ouvre directement le mode créateur.
 
 Chaque modification est enregistrée tout de suite dans le dépôt GitHub du site. Tu la vois immédiatement ; les visiteurs la voient une à deux minutes plus tard.
 
-- **Voir comme le public** : affiche le site tel que les visiteurs le voient. Le bouton « Mode créateur » en bas à droite te ramène aux outils.
+- **Voir comme le public** : cache les outils pour vérifier un changement. Le bouton « Mode créateur » en bas à droite te les rend.
 - **Se déconnecter** : oublie la clé dans ce navigateur. À faire sur un ordinateur partagé.
+
+Pour partager une page (une équipe, un joueur), copie son adresse depuis le site public, pas depuis le mode créateur.
 
 Si le site indique que ta clé n'est plus valable, crée-en une nouvelle sur GitHub et reconnecte-toi.
 
