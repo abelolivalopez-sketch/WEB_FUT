@@ -72,7 +72,8 @@ window.LIGUE_S = {
 - `datos.json` en la raíz con equipos, jugadores, partidos, notas, temporadas, premios y textos.
 - Las fotos y logos como archivos en `img/jugadores/`, `img/equipos/` e `img/sitio/`.
 - El público lee esos archivos. No ve ningún botón del modo creador ni enlace al espacio creador.
-- Para editar se entra por `…/WEB_FUT/#createur` con una **llave de GitHub** (ver abajo). Sin la llave nadie puede guardar nada, aunque conozca la dirección.
+- Hay dos enlaces. El normal, `https://abelolivalopez-sketch.github.io/WEB_FUT/`, es siempre la web pública, también en el navegador de quien tiene la llave guardada: no usa la llave y lee lo mismo que cualquier visitante. El de creador, `https://abelolivalopez-sketch.github.io/WEB_FUT/?createur`, pide la **llave de GitHub** (ver abajo) la primera vez y luego abre directamente el modo creador. Sin la llave nadie puede guardar nada, aunque conozca ese enlace.
+- Una página copiada desde el modo creador (`…?createur#equipes`) se ve como la web normal para quien no tiene la llave; solo el enlace de creador sin nada detrás enseña el formulario de la llave.
 - Cada vez que se guarda algo, la web hace un commit en `main` («Ligue S : Joueur ajouté», etc.) con `datos.json` y las fotos nuevas. Las fotos que se cambian o se quitan se borran del repositorio en ese mismo commit.
 - Quien edita ve el cambio al instante. El público lo ve cuando GitHub Pages termina de publicar, en uno o dos minutos.
 - Todo queda en el historial del repositorio: para deshacer un cambio basta con revertir su commit en GitHub.
@@ -91,11 +92,31 @@ La primera vez que se entra con la llave en un navegador que ya tenía datos gua
 3. *Repository access*: *Only select repositories* › `WEB_FUT`.
 4. *Permissions › Repository permissions › Contents*: **Read and write**. No hace falta nada más.
 5. *Generate token* y copiarla (empieza por `github_pat_`). GitHub no la vuelve a enseñar.
-6. Abrir `https://abelolivalopez-sketch.github.io/WEB_FUT/#createur`, pegarla y «Se connecter». Se queda guardada en ese navegador hasta pulsar «Se déconnecter».
+6. Abrir `https://abelolivalopez-sketch.github.io/WEB_FUT/?createur`, pegarla y «Se connecter». Se queda guardada en ese navegador hasta pulsar «Se déconnecter».
 
 La llave solo sirve para este repositorio. Si se pierde o alguien la ve, se borra en la misma página de GitHub y se crea otra.
 
+**Mientras sea un prototipo.** Para que Tom pruebe el modo creador: crear una segunda llave igual, solo para él, con caducidad corta (30 días), y mandársela por privado. Si hace falta, se borra la suya sin tocar la de Abel. Sus cambios aparecen en el historial a nombre de Abel.
+
 **Para pasársela a Tom.** Una llave *fine-grained* solo puede tocar repositorios de la cuenta que la crea. Lo más limpio es transferir el repositorio a la cuenta de Tom (*Settings › General › Transfer ownership*), cambiar `usuario` en `config.js` y que él cree su propia llave. La dirección de la web pasará a ser `https://<cuenta-de-tom>.github.io/WEB_FUT/`.
+
+## Dominio propio
+
+Cuando se compre el dominio (por ejemplo `ligue-s.fr`), la web sigue en GitHub Pages; solo cambia la dirección.
+
+1. Comprar el dominio, a ser posible a nombre de Tom.
+2. En GitHub, verificar el dominio en la cuenta dueña del repositorio, antes de añadirlo al repositorio: foto de perfil › *Settings › Pages › Add a domain*. GitHub da un registro `TXT` para el DNS.
+3. En el DNS del registrador:
+   - Cuatro registros `A` para el dominio raíz: `185.199.108.153`, `185.199.109.153`, `185.199.110.153` y `185.199.111.153`.
+   - Opcional, cuatro `AAAA`: `2606:50c0:8000::153`, `2606:50c0:8001::153`, `2606:50c0:8002::153` y `2606:50c0:8003::153`.
+   - Un `CNAME` para `www` que apunte a `abelolivalopez-sketch.github.io` (sin `/WEB_FUT`).
+4. En el repositorio: *Settings › Pages › Custom domain*, escribir el dominio y *Save*. GitHub añade un archivo `CNAME` a `main` con un commit; no hay que tocarlo.
+5. Cuando GitHub lo permita (puede tardar hasta 24 h), marcar *Enforce HTTPS*.
+6. Los enlaces pasan a ser `https://ligue-s.fr/` (público) y `https://ligue-s.fr/?createur` (creador). La dirección de github.io redirige sola al dominio.
+7. La llave se guarda por dirección: en el dominio nuevo hay que pegarla una vez más en cada navegador.
+8. Quitar `<meta name="robots" content="noindex">` de `index.html` cuando la web sea la definitiva, para que salga en Google.
+
+Si el repositorio se transfiere a la cuenta de Tom, el `CNAME` del registro `www` pasa a ser `<cuenta-de-tom>.github.io` y el dominio se verifica en su cuenta.
 
 ## Ponerla en GitHub
 
@@ -127,7 +148,7 @@ Para actualizarla, se suben los archivos cambiados de la misma forma y GitHub re
      supabaseClave: "sb_publishable_…"
    };
    ```
-8. Entrar en `…/#createur` con la cuenta de Tom. Si ya se habían metido datos en modo local, en ese navegador: «Données › Télécharger» antes de rellenar `config.js`, y después, ya conectado, «Données › Importer». Las fotos se suben solas al almacén `ligue-s`.
+8. Entrar en `…/?createur` con la cuenta de Tom. Si ya se habían metido datos en modo local, en ese navegador: «Données › Télécharger» antes de rellenar `config.js`, y después, ya conectado, «Données › Importer». Las fotos se suben solas al almacén `ligue-s`.
 
 Cómo funciona por dentro:
 

@@ -704,6 +704,7 @@ function acceso(ctx) {
     <section class="acceso" aria-labelledby="t-acceso">
       <h1 id="t-acceso">Espace créateur</h1>
       <p>Connecte-toi pour modifier les équipes, le calendrier, les notes, les résultats et les vidéos.</p>
+      ${ctx.modo === "local" ? "" : "<p>Garde cette adresse dans tes favoris : c'est ton accès au mode créateur. L'adresse du site sans « ?createur » montre toujours la version publique.</p>"}
       ${ctx.modo === "local" ? "<p>Le mode créateur est déjà ouvert sur cet appareil.</p>" : ctx.modo === "repo" ? `<form class="formulario" id="form-acceso" novalidate>
         <label class="campo" for="acceso-llave"><span class="campo-etiqueta">Clé d'accès GitHub</span><input id="acceso-llave" name="llave" type="password" autocomplete="off" spellcheck="false" required aria-describedby="acceso-llave-ayuda"></label>
         <small class="campo-ayuda" id="acceso-llave-ayuda">Une clé « fine-grained » limitée au dépôt du site, avec la permission « Contents » en lecture et écriture. <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Créer une clé sur GitHub</a>. Elle reste enregistrée dans ce navigateur.</small>
@@ -740,7 +741,6 @@ function pie(ctx) {
     <nav class="pie-legal" aria-label="Informations">
       <a href="#palmares">Palmarès</a>
       <a href="#confidentialite">Politique de confidentialité</a>
-      ${ctx.modo === "nube" && !ctx.puedeEditar ? '<a href="#createur">Espace créateur</a>' : ""}
     </nav>
     <p class="pie-credito">Site créé par <a href="https://a2wdstudio.com" target="_blank" rel="noopener">A2WD Studio</a></p>
   </div>`;
