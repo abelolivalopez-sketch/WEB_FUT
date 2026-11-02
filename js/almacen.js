@@ -4,6 +4,10 @@ import { cambios, vacio, desdeServidor } from "./sincronizar.js";
 
 const CLAVE_DATOS = "ligue-s:datos";
 const CLAVE_COPIA = "ligue-s:copia";
+const CLAVE_BASE = "ligue-s:base";
+const CLAVE_MODIFICADO = "ligue-s:modificado";
+const CLAVE_APARTADO = "ligue-s:apartado";
+const ARCHIVO_PUBLICADO = "datos.json";
 const CUBO = "ligue-s";
 const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/+esm";
 
@@ -32,6 +36,64 @@ function escribir(clave, valor) {
   }
 }
 
+function leerTexto(clave) {
+  try {
+    return localStorage.getItem(clave);
+  } catch {
+    return null;
+  }
+}
+
+function escribirTexto(clave, valor) {
+  try {
+    if (valor === null) localStorage.removeItem(clave);
+    else localStorage.setItem(clave, valor);
+  } catch {
+    return;
+  }
+}
+
+async function cargarPublicados() {
+  try {
+    const respuesta = await fetch(`${ARCHIVO_PUBLICADO}?v=${Date.now()}`, { cache: "no-store" });
+    if (!respuesta.ok) return null;
+    const datos = await respuesta.json();
+    if (!datos || typeof datos !== "object" || !Array.isArray(datos.equipos)) return null;
+    return { datos, sello: typeof datos.publicado === "string" ? datos.publicado : "" };
+  } catch {
+    return null;
+  }
+}
+
+async function cargarLocal() {
+  const locales = leer(CLAVE_DATOS);
+  const publicados = await cargarPublicados();
+  const base = leerTexto(CLAVE_BASE) || "";
+  if (publicados && (!locales || publicados.sello > base)) {
+    const apartado = Boolean(locales) && leerTexto(CLAVE_MODIFICADO) === "1";
+    if (apartado) escribir(CLAVE_APARTADO, { datos: locales, fecha: new Date().toISOString() });
+    escribir(CLAVE_DATOS, publicados.datos);
+    escribirTexto(CLAVE_BASE, publicados.sello);
+    escribirTexto(CLAVE_MODIFICADO, null);
+    return { datos: publicados.datos, sinConexion: false, publicado: true, apartado };
+  }
+  return { datos: locales, sinConexion: false, publicado: Boolean(publicados), apartado: false };
+}
+
+function marcarPublicado(sello) {
+  escribirTexto(CLAVE_BASE, sello);
+  escribirTexto(CLAVE_MODIFICADO, null);
+}
+
+function leerApartado() {
+  const a = leer(CLAVE_APARTADO);
+  return a && a.datos ? a : null;
+}
+
+function borrarApartado() {
+  escribirTexto(CLAVE_APARTADO, null);
+}
+
 async function conectar() {
   if (cliente) return cliente;
   const { createClient } = await import(SUPABASE_JS);
@@ -47,7 +109,7 @@ function error(codigo, original) {
 }
 
 async function cargar() {
-  if (modo === "local") return { datos: leer(CLAVE_DATOS), sinConexion: false };
+  if (modo === "local") return cargarLocal();
   try {
     const sb = await conectar();
     const { data, error: fallo } = await sb.rpc("leer_ligue");
@@ -66,6 +128,7 @@ async function cargar() {
 async function guardar(datos) {
   if (modo === "local") {
     if (!escribir(CLAVE_DATOS, datos)) throw error("memoria");
+    escribirTexto(CLAVE_MODIFICADO, "1");
     return;
   }
   const c = cambios(base, datos);
@@ -156,4 +219,4 @@ async function alCambiarSesion(funcion) {
   sb.auth.onAuthStateChange((evento) => funcion(evento));
 }
 
-export { modo, cargar, guardar, subirImagen, borrarImagen, subirIncrustadas, usuario, esCreador, entrar, salir, alCambiarSesion };
+export { modo, cargar, guardar, marcarPublicado, leerApartado, borrarApartado, subirImagen, borrarImagen, subirIncrustadas, usuario, esCreador, entrar, salir, alCambiarSesion };

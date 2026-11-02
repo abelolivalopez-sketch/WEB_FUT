@@ -54,15 +54,34 @@ Un equipo o un jugador que vuelve otra temporada es el mismo: conserva su ficha,
 
 ## Dos modos
 
-**Modo local (ahora).** Con `config.js` vacío, la web abre en modo creador y guarda en el navegador de quien la usa. Sirve para enseñarla y probarla, pero lo que se cambia solo lo ve ese navegador. Arranca con dos temporadas de ejemplo (la 4, terminada y con premios, y la 5, en curso); desde «Données» se pueden borrar o volver a poner.
+**Modo prototipo (ahora, sin base de datos).** Con `config.js` vacío, los cambios se hacen en el navegador y se publican con un archivo del repositorio:
 
-**Modo en línea (para pasársela a Tom).** Con Supabase configurado, la gente ve la web sin herramientas y Tom entra por «Espace créateur» (pie de página, o `#createur`) con su correo y contraseña. Solo los correos de la tabla `creadores` pueden cambiar algo.
+1. En tu ordenador, abre la web (la de GitHub o con Live Server) y entra en modo creador.
+2. Mete equipos, jugadores, fotos, partidos, notas, etc. Mientras no publiques, todo se queda solo en tu navegador.
+3. «Données › Publier sur le site» descarga `datos.json` con todo el contenido.
+4. Sube ese `datos.json` a la raíz del repositorio (*Add file › Upload files*, reemplaza el anterior).
+5. En uno o dos minutos, cualquiera que abra la web ve esos datos, en la vista pública.
+
+Detalles:
+- Sin `datos.json` en el repositorio, la web enseña las dos temporadas de ejemplo.
+- Quien abre la web puede probar el modo creador con el botón de abajo a la derecha. Lo que cambie se queda en su navegador hasta que publiques una versión nueva. Entonces se le cambia por la nueva y sus pruebas quedan apartadas en «Données», por si las quiere recuperar.
+- Si exportas y aún no has subido el archivo, tu navegador conserva tus cambios.
+- Las fotos van dentro de `datos.json` (reducidas a 480 px). Con muchas fotos el archivo pesa varios MB, pero GitHub admite hasta 25 MB por archivo.
+- Al subir una versión nueva del código, no hace falta tocar `datos.json`: el zip no lo trae.
+
+**Modo en línea (cuando Tom la valide).** Con Supabase configurado, la gente ve la web sin herramientas y Tom entra por «Espace créateur» (pie de página, o `#createur`) con su correo y contraseña. Solo los correos de la tabla `creadores` pueden cambiar algo. El `datos.json` del prototipo se pasa con «Données › Importer» (las fotos se suben solas a Supabase) y después se puede borrar del repositorio.
 
 ## Ponerla en GitHub
 
-1. Crear el repositorio `web-futbol` (público) y subir el contenido del zip a `main`, sin carpeta envoltorio.
-2. *Settings › Pages*: «Deploy from a branch», rama `main`, carpeta `/ (root)`.
-3. La web queda en `https://abelolivalopez-sketch.github.io/web-futbol/`.
+El repositorio es `WEB_FUT` (público).
+
+1. Descomprimir el zip en el ordenador.
+2. En GitHub, dentro del repositorio: *Add file › Upload files* y arrastrar **el contenido** de la carpeta (los archivos sueltos y las carpetas `js`, `docs` y `supabase`), no el zip ni la carpeta que los contiene. Commit directo a `main`.
+3. Comprobar que en la raíz del repositorio están `index.html` y las carpetas `js`, `docs` y `supabase`.
+4. *Settings › Pages*: «Deploy from a branch», rama `main`, carpeta `/ (root)`.
+5. La web queda en `https://abelolivalopez-sketch.github.io/WEB_FUT/` (tarda uno o dos minutos).
+
+Para actualizarla, se suben los archivos cambiados de la misma forma y GitHub reemplaza los que tienen el mismo nombre. Un archivo que ya no se usa hay que borrarlo a mano en GitHub.
 
 ## Activar el modo en línea (Supabase)
 

@@ -7,6 +7,7 @@ import { crearEjemplo } from "./ejemplo.js";
 const RUTAS = ["inicio", "calendrier", "equipes", "joueurs", "videos", "palmares", "confidentialite", "createur"];
 const TITULOS = { inicio: "", calendrier: "Calendrier", equipes: "Équipes", joueurs: "Joueurs", videos: "Vidéos", palmares: "Palmarès", confidentialite: "Politique de confidentialité", createur: "Espace créateur" };
 const CLAVE_PUBLICO = "ligue-s:vista-publica";
+const CLAVE_VISTA_LOCAL = "ligue-s:vista";
 
 const cabeceraEl = document.getElementById("cabecera");
 const barraEl = document.getElementById("barra");
@@ -31,6 +32,22 @@ function leerSesion(clave) {
     return sessionStorage.getItem(clave);
   } catch {
     return null;
+  }
+}
+
+function leerLocal(clave) {
+  try {
+    return localStorage.getItem(clave);
+  } catch {
+    return null;
+  }
+}
+
+function escribirLocal(clave, valor) {
+  try {
+    localStorage.setItem(clave, valor);
+  } catch {
+    return;
   }
 }
 
@@ -216,16 +233,38 @@ function quitarHuerfanos(d) {
   return sobran;
 }
 
-function exportar() {
-  const blob = new Blob([JSON.stringify(estado.datos, null, 2)], { type: "application/json" });
+function descargar(contenido, nombre) {
+  const blob = new Blob([JSON.stringify(contenido, null, 2)], { type: "application/json" });
   const enlace = document.createElement("a");
   enlace.href = URL.createObjectURL(blob);
-  enlace.download = `ligue-s-${hoyISO()}.json`;
+  enlace.download = nombre;
   document.body.append(enlace);
   enlace.click();
   enlace.remove();
   setTimeout(() => URL.revokeObjectURL(enlace.href), 2000);
+}
+
+function exportar() {
+  descargar(estado.datos, `ligue-s-${hoyISO()}.json`);
   avisar("Sauvegarde téléchargée");
+}
+
+function publicar() {
+  const sello = new Date().toISOString();
+  descargar({ ...estado.datos, publicado: sello }, "datos.json");
+  almacen.marcarPublicado(sello);
+  if (!leerLocal(CLAVE_VISTA_LOCAL)) escribirLocal(CLAVE_VISTA_LOCAL, "creador");
+  editor.cerrar();
+  avisar("datos.json téléchargé : remplace-le dans le dépôt GitHub pour publier");
+}
+
+async function recuperarApartado() {
+  const apartado = almacen.leerApartado();
+  if (!apartado) return;
+  const ok = await editor.confirmar({ titulo: "Récupérer tes modifications ?", mensaje: "Le contenu actuel sera remplacé par les modifications que tu avais faites dans ce navigateur avant la dernière publication.", boton: "Récupérer" });
+  if (!ok) return;
+  const hecho = await aplicar((d) => Object.assign(d, normalizar(apartado.datos)), "Modifications récupérées");
+  if (hecho) almacen.borrarApartado();
 }
 
 async function importar(archivo) {
@@ -353,7 +392,8 @@ function reproducir(id) {
 
 function activarCreador(activo) {
   estado.creador = activo;
-  escribirSesion(CLAVE_PUBLICO, activo ? null : "1");
+  if (almacen.modo === "local") escribirLocal(CLAVE_VISTA_LOCAL, activo ? "creador" : "publico");
+  else escribirSesion(CLAVE_PUBLICO, activo ? null : "1");
   pintar();
 }
 
@@ -380,6 +420,9 @@ const api = {
   subirImagen,
   borrarImagen: (url) => almacen.borrarImagen(url),
   exportar,
+  publicar,
+  apartado: () => almacen.leerApartado()?.fecha || null,
+  recuperarApartado,
   importar,
   reiniciar,
   verTemporada,
@@ -497,8 +540,10 @@ async function arrancar() {
   document.addEventListener("error", ocultarMiniaturaRota, true);
   window.addEventListener("hashchange", alCambiarRuta);
   pintar();
+  let carga;
   try {
-    const { datos, sinConexion } = await almacen.cargar();
+    carga = await almacen.cargar();
+    const { datos, sinConexion } = carga;
     estado.sinConexion = sinConexion;
     const viejoEjemplo = datos && datos.ejemplo && (Number(datos.esquema) || 1) < 3;
     estado.datos = normalizar(almacen.modo === "local" && (!datos || viejoEjemplo) ? crearEjemplo() : datos || {});
@@ -525,9 +570,15 @@ async function arrancar() {
       estado.puedeEditar = false;
     }
   }
-  estado.creador = estado.puedeEditar && leerSesion(CLAVE_PUBLICO) !== "1";
+  if (almacen.modo === "local") {
+    const preferencia = leerLocal(CLAVE_VISTA_LOCAL);
+    estado.creador = preferencia ? preferencia === "creador" : !carga.publicado;
+  } else {
+    estado.creador = estado.puedeEditar && leerSesion(CLAVE_PUBLICO) !== "1";
+  }
   if (ruta().nombre === "createur" && estado.puedeEditar) location.replace("#inicio");
   pintar();
+  if (carga.apartado) avisar("Le site a été mis à jour. Tes modifications non publiées sont gardées dans « Données ».", "ok", { texto: "Voir", alPulsar: () => editor.abrirDatos(api) });
 }
 
 arrancar();

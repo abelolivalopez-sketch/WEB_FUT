@@ -92,7 +92,7 @@ function cabecera(ctx, activa) {
 function barraCreador(ctx) {
   if (!ctx.puedeEditar) return ctx.d.ejemplo ? `<p class="aviso-ejemplo">Aperçu avec des équipes, des notes et des matchs d'exemple.</p>` : "";
   if (!ctx.creador) return `<button type="button" class="flotante" data-accion="modo-creador">${ICONOS.lapiz}<span>Mode créateur</span></button>`;
-  const donde = ctx.modo === "local" ? "Les modifications sont enregistrées dans ce navigateur." : `Connecté avec ${esc(ctx.usuario?.email || "ton compte")}.`;
+  const donde = ctx.modo === "local" ? "Les modifications restent dans ce navigateur. Pour les montrer à tout le monde : « Données », puis « Publier sur le site »." : `Connecté avec ${esc(ctx.usuario?.email || "ton compte")}.`;
   const avisos = [
     !ctx.esActual ? `Tu modifies la ${esc(ctx.temporada.nombre)}, qui n'est pas la saison en cours.` : "",
     ctx.d.ejemplo ? "Les équipes, joueurs, notes et matchs affichés sont des exemples. Modifie-les ou efface tout depuis « Données »." : ""
