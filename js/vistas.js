@@ -13,7 +13,7 @@ const ICONOS = {
 
 const MARCA = '<svg class="marca-svg" viewBox="-45 -61 90 122" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="M0 -61L45 -35L45 35L0 61L-45 35L-45 -35ZM0 -48.5L34 -29L34 -10.2L0 -29.1L-16.3 -20.1L34 10.1L34 29L0 48.5L-34 29L-34 10.2L0 29.1L16.3 20.1L-34 -10.1L-34 -29Z"/></svg>';
 
-const ENLACES_MENU = [["inicio", "Accueil"], ["calendrier", "Calendrier"], ["equipes", "Équipes"], ["joueurs", "Joueurs"], ["videos", "Vidéos"]];
+const ENLACES_MENU = [["inicio", "Accueil"], ["calendrier", "Calendrier"], ["equipes", "Classement"], ["joueurs", "Joueurs"], ["videos", "Vidéos"]];
 
 function img(url) {
   return esc(fuenteImagen(url));
