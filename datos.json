@@ -1454,7 +1454,10 @@
       "visitante": "ej-dynamo",
       "jornada": "Journée 2",
       "lugar": "Terrain 1",
-      "goles": null
+      "goles": [
+        20,
+        0
+      ]
     }
   ],
   "actuaciones": [
@@ -3689,6 +3692,30 @@
       "equipo": "ej-canal",
       "nota": 6,
       "goles": 0
+    },
+    {
+      "id": "9ecebf5f-a83d-476f-bee7-07f6e592ae7a",
+      "partido": "e5ffdb83-6def-481c-94de-06b67cfe1d0e",
+      "jugador": "66b12bce-a974-407a-8945-4977470f3436",
+      "equipo": "3eaecd06-1751-4be5-a440-489ac6c2ff69",
+      "nota": 8.5,
+      "goles": 6
+    },
+    {
+      "id": "91fd1dd3-36b8-4f26-b6fe-b7cd4d989798",
+      "partido": "e5ffdb83-6def-481c-94de-06b67cfe1d0e",
+      "jugador": "a23aa7e4-73dd-4a9d-b97e-500b4bfb837e",
+      "equipo": "3eaecd06-1751-4be5-a440-489ac6c2ff69",
+      "nota": 9.25,
+      "goles": 8
+    },
+    {
+      "id": "7f842d15-4a6c-4a0d-9689-fbcb07289919",
+      "partido": "e5ffdb83-6def-481c-94de-06b67cfe1d0e",
+      "jugador": "ca06651c-1478-458e-be00-b76ae808df58",
+      "equipo": "3eaecd06-1751-4be5-a440-489ac6c2ff69",
+      "nota": 7.75,
+      "goles": 6
     }
   ],
   "lives": [
