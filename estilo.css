@@ -1,68 +1,18 @@
 :root {
-  --fond: #F1F5FB;
-  --papier: #FFFFFF;
-  --encre: #0D1A36;
-  --gris: #55617A;
-  --trait: #D3DCEA;
-  --logo: #1D418F;
-  --blanc: #FFFFFF;
-  --terrain: #1D418F;
-  --terrain-2: #1A3B84;
-  --sur-terrain: #FFFFFF;
-  --vif: #2E68E0;
-  --sur-vif: #FFFFFF;
-  --nuit: #0B1631;
-  --sur-nuit: #EEF2FA;
-  --direct: #D21F2A;
-  --victoire: #187A4B;
-  --nul: #66708A;
-  --defaite: #C3352B;
-  --sur-forma: #FFFFFF;
-  --peligro: #B92E24;
-  --sur-peligro: #FFFFFF;
-  --ombre: 0 1px 0 rgba(13, 26, 54, 0.05), 0 14px 32px -18px rgba(13, 26, 54, 0.45);
-  --f-titre: "Saira Extra Condensed", "Arial Narrow", "Roboto Condensed", "DejaVu Sans Condensed", sans-serif;
-  --f-texte: "Barlow", "Helvetica Neue", Arial, sans-serif;
-  --ancho: 1120px;
-  --radio: 6px;
-  color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --fond: #08101F;
-    --papier: #0F1A31;
-    --encre: #E6ECF7;
-    --gris: #9AA7BF;
-    --trait: #24324F;
-    --terrain: #18387E;
-    --terrain-2: #163372;
-    --vif: #6E9DFF;
-    --sur-vif: #08101F;
-    --nuit: #050B19;
-    --direct: #FF5059;
-    --victoire: #3BBF7A;
-    --nul: #7D88A0;
-    --defaite: #F0665B;
-    --sur-forma: #08101F;
-    --peligro: #F0665B;
-    --sur-peligro: #08101F;
-    --ombre: 0 1px 0 rgba(0, 0, 0, 0.3), 0 14px 32px -18px rgba(0, 0, 0, 0.8);
-    color-scheme: dark;
-  }
-}
-
-:root[data-theme="dark"] {
   --fond: #08101F;
   --papier: #0F1A31;
   --encre: #E6ECF7;
   --gris: #9AA7BF;
   --trait: #24324F;
+  --logo: #1D418F;
+  --blanc: #FFFFFF;
   --terrain: #18387E;
   --terrain-2: #163372;
+  --sur-terrain: #FFFFFF;
   --vif: #6E9DFF;
   --sur-vif: #08101F;
   --nuit: #050B19;
+  --sur-nuit: #EEF2FA;
   --direct: #FF5059;
   --victoire: #3BBF7A;
   --nul: #7D88A0;
@@ -71,9 +21,12 @@
   --peligro: #F0665B;
   --sur-peligro: #08101F;
   --ombre: 0 1px 0 rgba(0, 0, 0, 0.3), 0 14px 32px -18px rgba(0, 0, 0, 0.8);
+  --f-titre: "Saira Extra Condensed", "Arial Narrow", "Roboto Condensed", "DejaVu Sans Condensed", sans-serif;
+  --f-texte: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  --ancho: 1120px;
+  --radio: 6px;
   color-scheme: dark;
 }
-
 
 *, *::before, *::after { box-sizing: border-box; }
 
