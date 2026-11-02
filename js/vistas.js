@@ -1,3 +1,4 @@
+import { fuenteImagen } from "./imagen.js";
 import { esc, usuarioRed, sigla, tinta, iniciales, plural, ordinal, nota, media, nivelNota, diaLargo, partesDia, fechaCorta, fechaMini, porFecha, porMedia, porGoles, agenda, agruparPorDia, siguienteLive, siguientePartido, plantillaDe, temporadasDeJugador, estadisticas, historialEquipo, historialJugador, campeon } from "./logica.js";
 
 const ICONOS = {
@@ -13,6 +14,10 @@ const ICONOS = {
 const MARCA = '<svg class="marca-svg" viewBox="-45 -61 90 122" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="M0 -61L45 -35L45 35L0 61L-45 35L-45 -35ZM0 -48.5L34 -29L34 -10.2L0 -29.1L-16.3 -20.1L34 10.1L34 29L0 48.5L-34 29L-34 10.2L0 29.1L16.3 20.1L-34 -10.1L-34 -29Z"/></svg>';
 
 const ENLACES_MENU = [["inicio", "Accueil"], ["calendrier", "Calendrier"], ["equipes", "Équipes"], ["joueurs", "Joueurs"], ["videos", "Vidéos"]];
+
+function img(url) {
+  return esc(fuenteImagen(url));
+}
 
 function estiloEquipo(e) {
   return e ? `--c:${e.color};--t:${tinta(e.color)}` : "--c:#1D418F;--t:#FFFFFF";
@@ -39,16 +44,16 @@ function placa(e) {
 }
 
 function escudoEquipo(e, tamano) {
-  const contenido = e.logo ? `<img src="${esc(e.logo)}" alt="">` : `<span>${esc(sigla(e))}</span>`;
+  const contenido = e.logo ? `<img src="${img(e.logo)}" alt="">` : `<span>${esc(sigla(e))}</span>`;
   return `<span class="escudo escudo-${tamano}${e.logo ? " con-logo" : ""}" style="${estiloEquipo(e)}" aria-hidden="true">${contenido}</span>`;
 }
 
 function marcaLiga(sitio, clase) {
-  return `<span class="${clase}${sitio.logo ? " con-logo" : ""}" aria-hidden="true">${sitio.logo ? `<img src="${esc(sitio.logo)}" alt="">` : MARCA}</span>`;
+  return `<span class="${clase}${sitio.logo ? " con-logo" : ""}" aria-hidden="true">${sitio.logo ? `<img src="${img(sitio.logo)}" alt="">` : MARCA}</span>`;
 }
 
 function avatar(j, e, clase) {
-  return `<span class="${clase}" style="${estiloEquipo(e)}">${j.foto ? `<img src="${esc(j.foto)}" alt="" loading="lazy">` : `<span class="iniciales" aria-hidden="true">${esc(iniciales(j.nombre))}</span>`}</span>`;
+  return `<span class="${clase}" style="${estiloEquipo(e)}">${j.foto ? `<img src="${img(j.foto)}" alt="" loading="lazy">` : `<span class="iniciales" aria-hidden="true">${esc(iniciales(j.nombre))}</span>`}</span>`;
 }
 
 function notaChip(n, clase = "") {
@@ -92,8 +97,14 @@ function cabecera(ctx, activa) {
 function barraCreador(ctx) {
   if (!ctx.puedeEditar) return ctx.d.ejemplo ? `<p class="aviso-ejemplo">Aperçu avec des équipes, des notes et des matchs d'exemple.</p>` : "";
   if (!ctx.creador) return `<button type="button" class="flotante" data-accion="modo-creador">${ICONOS.lapiz}<span>Mode créateur</span></button>`;
-  const donde = ctx.modo === "local" ? "Les modifications restent dans ce navigateur. Pour les montrer à tout le monde : « Données », puis « Publier sur le site »." : `Connecté avec ${esc(ctx.usuario?.email || "ton compte")}.`;
+  const textos = {
+    local: "Les modifications restent dans ce navigateur. Pour les montrer à tout le monde : « Données », puis « Publier sur le site ».",
+    repo: "Connecté à GitHub. Chaque modification est enregistrée dans le dépôt ; le site public se met à jour une à deux minutes après.",
+    nube: `Connecté avec ${esc(ctx.usuario?.email || "ton compte")}.`
+  };
+  const donde = textos[ctx.modo];
   const avisos = [
+    ctx.pendiente ? 'Ces données sont seulement dans ce navigateur, pas encore sur GitHub. <button type="button" data-accion="guardar-pendiente">Enregistrer sur GitHub</button>' : "",
     !ctx.esActual ? `Tu modifies la ${esc(ctx.temporada.nombre)}, qui n'est pas la saison en cours.` : "",
     ctx.d.ejemplo ? "Les équipes, joueurs, notes et matchs affichés sont des exemples. Modifie-les ou efface tout depuis « Données »." : ""
   ].filter(Boolean);
@@ -105,7 +116,7 @@ function barraCreador(ctx) {
         <button type="button" data-accion="temporadas">Saisons</button>
         <button type="button" data-accion="datos">Données</button>
         <button type="button" data-accion="modo-publico">Voir comme le public</button>
-        ${ctx.modo === "nube" ? '<button type="button" data-accion="salir">Se déconnecter</button>' : ""}
+        ${ctx.modo !== "local" ? '<button type="button" data-accion="salir">Se déconnecter</button>' : ""}
       </div>
     </div>
     ${avisos.map((a) => `<p class="barra-ejemplo">${a}</p>`).join("")}
@@ -385,7 +396,7 @@ function ficha(ctx, p) {
   const acciones = ctx.creador ? herramientas(`${btnIcono("editar-jugador", `Modifier ${j.nombre}`, j.id, ICONOS.lapiz)}${btnIcono("borrar-jugador", `Retirer ${j.nombre} de la saison`, j.id, ICONOS.papelera)}`, "herramientas-ficha") : "";
   return `<article class="ficha" style="${estiloEquipo(e)}">
     <div class="ficha-foto">
-      ${j.foto ? `<img src="${esc(j.foto)}" alt="" loading="lazy">` : `<span class="ficha-iniciales" aria-hidden="true">${esc(iniciales(j.nombre))}</span>`}
+      ${j.foto ? `<img src="${img(j.foto)}" alt="" loading="lazy">` : `<span class="ficha-iniciales" aria-hidden="true">${esc(iniciales(j.nombre))}</span>`}
       ${p.numero !== null ? `<span class="ficha-num"><span class="sr">Numéro </span>${p.numero}</span>` : ""}
       ${p.capitan ? '<span class="ficha-cap" title="Capitaine"><span aria-hidden="true">C</span><span class="sr">Capitaine</span></span>' : ""}
     </div>
@@ -450,7 +461,7 @@ function equipo(ctx, id) {
         <dl class="equipo-cifras">${cifras.map(([t, v]) => `<div><dt>${t}</dt><dd>${v}</dd></div>`).join("")}</dl>
         ${ctx.creador ? herramientas(`${btnCreador("editar-equipo", "Modifier l'équipe", { id, icono: ICONOS.lapiz })}${btnCreador("borrar-equipo", "Retirer de la saison", { id, icono: ICONOS.papelera })}`, "herramientas-equipo") : ""}
       </div>
-      ${e.foto ? `<figure class="equipo-foto"><img src="${esc(e.foto)}" alt="Photo de l'équipe ${esc(e.nombre)}"></figure>` : ""}
+      ${e.foto ? `<figure class="equipo-foto"><img src="${img(e.foto)}" alt="Photo de l'équipe ${esc(e.nombre)}"></figure>` : ""}
     </div>
   </section>
   <div class="contenedor pila">
@@ -693,7 +704,12 @@ function acceso(ctx) {
     <section class="acceso" aria-labelledby="t-acceso">
       <h1 id="t-acceso">Espace créateur</h1>
       <p>Connecte-toi pour modifier les équipes, le calendrier, les notes, les résultats et les vidéos.</p>
-      ${ctx.modo === "local" ? "<p>Le mode créateur est déjà ouvert sur cet appareil.</p>" : `<form class="formulario" id="form-acceso" novalidate>
+      ${ctx.modo === "local" ? "<p>Le mode créateur est déjà ouvert sur cet appareil.</p>" : ctx.modo === "repo" ? `<form class="formulario" id="form-acceso" novalidate>
+        <label class="campo" for="acceso-llave"><span class="campo-etiqueta">Clé d'accès GitHub</span><input id="acceso-llave" name="llave" type="password" autocomplete="off" spellcheck="false" required aria-describedby="acceso-llave-ayuda"></label>
+        <small class="campo-ayuda" id="acceso-llave-ayuda">Une clé « fine-grained » limitée au dépôt du site, avec la permission « Contents » en lecture et écriture. <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Créer une clé sur GitHub</a>. Elle reste enregistrée dans ce navigateur.</small>
+        <p class="form-error" role="alert" hidden></p>
+        <button type="submit" class="btn btn-principal">Se connecter</button>
+      </form>` : `<form class="formulario" id="form-acceso" novalidate>
         <label class="campo"><span class="campo-etiqueta">E-mail</span><input id="acceso-correo" name="correo" type="email" autocomplete="username" required></label>
         <label class="campo"><span class="campo-etiqueta">Mot de passe</span><input id="acceso-clave" name="clave" type="password" autocomplete="current-password" required></label>
         <p class="form-error" role="alert" hidden></p>

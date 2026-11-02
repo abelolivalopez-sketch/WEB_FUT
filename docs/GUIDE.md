@@ -4,10 +4,18 @@ Tout se modifie directement sur le site. Les boutons bleus en pointillés n'appa
 
 ## Se connecter
 
-Ouvre le site, puis « Espace créateur » tout en bas de la page. Entre ton e-mail et ton mot de passe. La barre bleue « Mode créateur » apparaît en haut.
+Le mode créateur n'apparaît pas sur le site public. Pour modifier :
+
+1. Ouvre l'adresse du site suivie de `#createur` (par exemple `…/WEB_FUT/#createur`).
+2. Colle ta clé d'accès GitHub et clique sur « Se connecter ». La clé reste enregistrée dans ce navigateur.
+3. La barre bleue « Mode créateur » apparaît en haut.
+
+Chaque modification est enregistrée tout de suite dans le dépôt GitHub du site. Tu la vois immédiatement ; les visiteurs la voient une à deux minutes plus tard.
 
 - **Voir comme le public** : affiche le site tel que les visiteurs le voient. Le bouton « Mode créateur » en bas à droite te ramène aux outils.
-- **Se déconnecter** : à faire sur un ordinateur partagé.
+- **Se déconnecter** : oublie la clé dans ce navigateur. À faire sur un ordinateur partagé.
+
+Si le site indique que ta clé n'est plus valable, crée-en une nouvelle sur GitHub et reconnecte-toi.
 
 ## Les saisons
 
@@ -55,12 +63,8 @@ Onglet **Palmarès** (en bas du site ou depuis la page Joueurs), **Ajouter un pr
 - Sur l'accueil : **Modifier le texte** (présentation de la ligue) et **Modifier les règles** (une règle par ligne).
 - **Paramètres** : nom de la ligue, phrase d'accroche, logo (sans image, le site garde le logo officiel), liens YouTube et Instagram, points par victoire, nul et défaite, nombre minimum de matchs notés pour le podium, nom de l'organisateur et e-mail de contact (ils apparaissent en bas du site et dans la politique de confidentialité).
 
-## Publier sans base de données (prototype)
-
-Tant que le site n'est pas relié à sa base de données, les modifications restent dans ton navigateur. Pour les montrer à tout le monde : **Données › Publier sur le site**, puis remplace le fichier `datos.json` à la racine du dépôt GitHub par celui que tu viens de télécharger.
-
 ## Les sauvegardes
 
 **Données › Télécharger** enregistre toute la ligue dans un fichier, toutes saisons comprises. Fais-le de temps en temps. **Importer** remet le contenu d'un fichier de sauvegarde. **Tout effacer** vide toutes les saisons : télécharge une sauvegarde avant.
 
-Si le site t'indique que la ligue a été modifiée depuis un autre appareil, recharge la page : tu as sans doute le site ouvert sur ton téléphone et sur ton ordinateur en même temps.
+Si le site t'indique que la ligue a été modifiée depuis un autre appareil, recharge la page : tu as sans doute le site ouvert sur ton téléphone et sur ton ordinateur en même temps. Chaque enregistrement est aussi gardé dans l'historique du dépôt GitHub.

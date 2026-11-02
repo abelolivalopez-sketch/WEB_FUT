@@ -24,7 +24,8 @@ const estado = {
   filtro: "proximos",
   ordenJugadores: "nota",
   temporada: null,
-  sinConexion: false
+  sinConexion: false,
+  pendiente: false
 };
 
 function leerSesion(clave) {
@@ -97,6 +98,7 @@ function contexto() {
     usuario: estado.usuario,
     filtro: estado.filtro,
     ordenJugadores: estado.ordenJugadores,
+    pendiente: estado.pendiente,
     hoy: hoyISO(),
     t,
     temporada: d.temporadas.find((x) => x.id === t),
@@ -174,7 +176,8 @@ function textoError(error) {
     conflicto: "La ligue a été modifiée depuis un autre appareil. Recharge la page pour voir la dernière version.",
     prohibido: "Ton compte n'a pas le droit de modifier la ligue.",
     imagen: "Cette image ne peut pas être lue. Essaie avec une photo en JPG ou PNG.",
-    subida: "La photo n'a pas pu être envoyée. Vérifie ta connexion et réessaie."
+    subida: "La photo n'a pas pu être envoyée. Vérifie ta connexion et réessaie.",
+    llave: "Ta clé GitHub n'est plus valable. Reconnecte-toi depuis l'espace créateur."
   };
   return codigos[error?.codigo] || "L'enregistrement n'a pas abouti. Vérifie ta connexion et réessaie.";
 }
@@ -185,8 +188,9 @@ async function aplicar(mutar, mensaje) {
     const copia = JSON.parse(antes);
     mutar(copia);
     const nuevos = normalizar(copia);
-    await almacen.guardar(nuevos);
+    await almacen.guardar(nuevos, mensaje);
     estado.datos = nuevos;
+    estado.pendiente = false;
     pintar();
     avisar(mensaje);
     return true;
@@ -404,6 +408,11 @@ function verTemporada(id) {
 
 async function salir() {
   await almacen.salir();
+  if (almacen.modo === "repo") {
+    location.hash = "#inicio";
+    location.reload();
+    return;
+  }
   estado.puedeEditar = false;
   estado.creador = false;
   estado.usuario = null;
@@ -465,7 +474,8 @@ const acciones = {
   "borrar-video": (id) => borrar("video", id),
   "nuevo-premio": (id) => editor.editarPremio(api, { id: null, temporada: id }),
   "editar-premio": (id) => editor.editarPremio(api, { id }),
-  "borrar-premio": (id) => borrar("premio", id)
+  "borrar-premio": (id) => borrar("premio", id),
+  "guardar-pendiente": () => aplicar(() => {}, "Données enregistrées sur GitHub")
 };
 
 const publicas = new Set(["modo-creador", "recargar", "saltar", "reproducir"]);
@@ -502,11 +512,11 @@ async function alEnviarAcceso(evento) {
   const form = evento.target;
   const error = form.querySelector(".form-error");
   const boton = form.querySelector('button[type="submit"]');
-  const correo = form.elements.correo.value.trim();
-  const clave = form.elements.clave.value;
+  const correo = (form.elements.llave || form.elements.correo).value.trim();
+  const clave = form.elements.clave?.value || "";
   error.hidden = true;
-  if (!correo || !clave) {
-    error.textContent = "Indique ton e-mail et ton mot de passe.";
+  if (!correo || (!clave && almacen.modo !== "repo")) {
+    error.textContent = almacen.modo === "repo" ? "Colle ta clé d'accès GitHub." : "Indique ton e-mail et ton mot de passe.";
     error.hidden = false;
     return;
   }
@@ -514,6 +524,11 @@ async function alEnviarAcceso(evento) {
   boton.textContent = "Connexion…";
   try {
     estado.usuario = await almacen.entrar(correo, clave);
+    if (almacen.modo === "repo") {
+      location.hash = "#inicio";
+      location.reload();
+      return;
+    }
     estado.puedeEditar = true;
     estado.creador = true;
     escribirSesion(CLAVE_PUBLICO, null);
@@ -521,7 +536,10 @@ async function alEnviarAcceso(evento) {
     pintar();
     avisar("Connecté : le mode créateur est ouvert");
   } catch (fallo) {
-    error.textContent = fallo.codigo === "sin-permiso" ? "Ce compte n'a pas accès à l'espace créateur." : "E-mail ou mot de passe incorrect.";
+    const mensajes = almacen.modo === "repo"
+      ? { "sin-permiso": "Cette clé n'a pas le droit de modifier le dépôt du site.", red: "Impossible de joindre GitHub. Vérifie ta connexion." }
+      : { "sin-permiso": "Ce compte n'a pas accès à l'espace créateur." };
+    error.textContent = mensajes[fallo.codigo] || (almacen.modo === "repo" ? "Clé invalide ou expirée." : "E-mail ou mot de passe incorrect.");
     error.hidden = false;
     boton.disabled = false;
     boton.textContent = "Se connecter";
@@ -546,7 +564,8 @@ async function arrancar() {
     const { datos, sinConexion } = carga;
     estado.sinConexion = sinConexion;
     const viejoEjemplo = datos && datos.ejemplo && (Number(datos.esquema) || 1) < 3;
-    estado.datos = normalizar(almacen.modo === "local" && (!datos || viejoEjemplo) ? crearEjemplo() : datos || {});
+    estado.datos = normalizar(almacen.modo !== "nube" && (!datos || viejoEjemplo) ? crearEjemplo() : datos || {});
+    estado.pendiente = Boolean(carga.pendiente) && !viejoEjemplo;
   } catch {
     estado.error = true;
     pintar();
@@ -554,6 +573,9 @@ async function arrancar() {
   }
   if (almacen.modo === "local") {
     estado.puedeEditar = true;
+  } else if (almacen.modo === "repo") {
+    estado.puedeEditar = Boolean(carga.editor);
+    estado.usuario = estado.puedeEditar ? await almacen.usuario() : null;
   } else {
     try {
       estado.usuario = await almacen.usuario();
@@ -578,6 +600,7 @@ async function arrancar() {
   }
   if (ruta().nombre === "createur" && estado.puedeEditar) location.replace("#inicio");
   pintar();
+  if (carga.llaveCaducada) avisar("Ta clé GitHub n'est plus valable. Reconnecte-toi depuis l'espace créateur.", "error");
   if (carga.apartado) avisar("Le site a été mis à jour. Tes modifications non publiées sont gardées dans « Données ».", "ok", { texto: "Voir", alPulsar: () => editor.abrirDatos(api) });
 }
 

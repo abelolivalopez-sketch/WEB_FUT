@@ -1,3 +1,4 @@
+import { fuenteImagen } from "./imagen.js";
 import { PUESTOS, COLORES, esc, uid, entero, enlaceSeguro, idYoutube, siglaAuto, porFecha, porNombre, diaLargo, iniciales, hoyISO, leerNota, nota, media, plural, equiposDe, plantillaDe, rankingJugadores, mejoresJugadores, mejoresGoleadores, clasificacion, siguienteNombreTemporada } from "./logica.js";
 
 const dialogo = document.getElementById("dialogo");
@@ -30,7 +31,7 @@ function campoHtml(c, valor) {
     return `<label class="campo campo-casilla" for="${id}" ${raiz}><input id="${id}" type="checkbox" name="${c.nombre}"${valor ? " checked" : ""}${describe}><span class="campo-etiqueta">${esc(c.etiqueta)}</span>${ayuda}</label>`;
   }
   if (c.tipo === "imagen") {
-    const vista = valor ? `<img src="${esc(valor)}" alt="">` : `<span>${esc(c.vacio || "")}</span>`;
+    const vista = valor ? `<img src="${esc(fuenteImagen(valor))}" alt="">` : `<span>${esc(c.vacio || "")}</span>`;
     return `<div class="campo campo-imagen" ${raiz}>
       <span class="campo-etiqueta">${esc(c.etiqueta)} <span class="opcional">facultatif</span></span>
       <div class="imagen-fila">
@@ -706,7 +707,7 @@ function abrirDatos(api) {
         <div><h3>Publier sur le site</h3><p>Télécharge le fichier datos.json avec tout le contenu actuel. Remplace ce fichier à la racine du dépôt GitHub : une à deux minutes après, tout le monde voit ces données.</p></div>
         <button type="button" class="btn btn-principal" data-datos="publicar">Télécharger datos.json</button>
       </div>` : ""}
-      ${local && api.apartado() ? `<div class="datos-opcion">
+      ${api.modo !== "nube" && api.apartado() ? `<div class="datos-opcion">
         <div><h3>Modifications mises de côté</h3><p>Une nouvelle version publiée a remplacé ce que tu avais modifié dans ce navigateur le ${esc(new Date(api.apartado()).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" }))}. Tu peux le récupérer.</p></div>
         <button type="button" class="btn btn-secundario" data-datos="recuperar">Récupérer</button>
       </div>` : ""}

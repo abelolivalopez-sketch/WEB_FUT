@@ -69,6 +69,7 @@ function enlaceSeguro(valor) {
 
 function imagenSegura(valor) {
   if (typeof valor === "string" && /^data:image\/(webp|jpeg|png|gif|avif);base64,/.test(valor)) return valor;
+  if (typeof valor === "string" && /^img\/[a-z]+\/[\w.-]+\.(webp|jpe?g|png)$/.test(valor)) return valor;
   return enlaceSeguro(valor);
 }
 
