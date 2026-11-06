@@ -1599,7 +1599,8 @@ a.mi-prono { color: var(--vif); }
 .tarjeta-prono { display: grid; align-content: start; gap: 10px; padding: 14px; border: 1px solid var(--trait); border-radius: var(--radio); background: var(--papier); }
 .tp-equipos { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-weight: 700; text-decoration: none; }
 .tp-equipos b { color: var(--gris); font-weight: 600; }
-.tp-equipos:hover span { text-decoration: underline; }
+.tp-equipo { display: inline-flex; align-items: center; gap: 8px; }
+.tp-equipos:hover .tp-nombre { text-decoration: underline; }
 .tp-fecha { color: var(--gris); font-size: 0.9rem; }
 .tarjeta-prono .prono-botones { max-width: none; }
 .tarjeta-prono .prono-boton { min-height: 46px; padding: 8px 10px; font-size: 0.9rem; }
