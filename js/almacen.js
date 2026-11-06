@@ -341,10 +341,94 @@ async function salir() {
   await sb.auth.signOut();
 }
 
+function errorCuenta(fallo) {
+  const texto = `${fallo?.message || ""} ${fallo?.code || ""}`.toLowerCase();
+  if (texto.includes("invalid login") || texto.includes("invalid_credentials")) return error("credenciales", fallo);
+  if (texto.includes("email not confirmed")) return error("sin-confirmar", fallo);
+  if (texto.includes("already registered") || texto.includes("user_already_exists")) return error("correo-usado", fallo);
+  if (texto.includes("sending") || texto.includes("confirmation email") || texto.includes("email_address_not_authorized")) return error("sin-correo", fallo);
+  if (texto.includes("password")) return error("clave-debil", fallo);
+  if (texto.includes("rate limit") || texto.includes("over_email_send_rate_limit")) return error("demasiados", fallo);
+  if (texto.includes("pseudo_pris")) return error("pseudo-usado", fallo);
+  if (texto.includes("pseudo_corto")) return error("pseudo-corto", fallo);
+  if (texto.includes("cerrado")) return error("cerrado", fallo);
+  if (texto.includes("sin_sesion") || texto.includes("jwt")) return error("sin-sesion", fallo);
+  return error("red", fallo);
+}
+
+async function cuenta() {
+  if (modo !== "nube") return null;
+  const sb = await conectar();
+  const { data } = await sb.auth.getSession();
+  const u = data.session?.user;
+  if (!u) return null;
+  const { data: perfil } = await sb.from("perfiles").select("pseudo").eq("id", u.id).maybeSingle();
+  return { id: u.id, email: u.email, pseudo: perfil?.pseudo || u.user_metadata?.pseudo || "Joueur", perfil: Boolean(perfil) };
+}
+
+async function registrar({ pseudo, correo, clave }) {
+  const sb = await conectar();
+  const { data: libre, error: falloLibre } = await sb.rpc("pseudo_libre", { p_pseudo: pseudo });
+  if (falloLibre) throw errorCuenta(falloLibre);
+  if (!libre) throw error("pseudo-usado");
+  const { data, error: fallo } = await sb.auth.signUp({ email: correo, password: clave, options: { data: { pseudo } } });
+  if (fallo) throw errorCuenta(fallo);
+  if (data.user && Array.isArray(data.user.identities) && !data.user.identities.length) throw error("correo-usado");
+  return { confirmar: !data.session };
+}
+
+async function entrarVisitante(correo, clave) {
+  const sb = await conectar();
+  const { error: fallo } = await sb.auth.signInWithPassword({ email: correo, password: clave });
+  if (fallo) throw errorCuenta(fallo);
+  return cuenta();
+}
+
+async function guardarPseudo(pseudo) {
+  const sb = await conectar();
+  const { data, error: fallo } = await sb.rpc("guardar_pseudo", { p_pseudo: pseudo });
+  if (fallo) throw errorCuenta(fallo);
+  return data;
+}
+
+async function pronosticar(partido, eleccion) {
+  const sb = await conectar();
+  const { error: fallo } = await sb.rpc("pronosticar", { p_partido: partido, p_eleccion: eleccion });
+  if (fallo) throw errorCuenta(fallo);
+}
+
+async function misPronosticos() {
+  if (modo !== "nube") return new Map();
+  const sb = await conectar();
+  const { data, error: fallo } = await sb.from("pronosticos").select("partido, eleccion");
+  if (fallo) return new Map();
+  return new Map((data || []).map((x) => [x.partido, x.eleccion]));
+}
+
+async function clasificacionPronosticos(temporada) {
+  const sb = await conectar();
+  const { data, error: fallo } = await sb.rpc("clasificacion_pronosticos", { p_temporada: temporada });
+  if (fallo) throw errorCuenta(fallo);
+  return (data || []).map((f) => ({ pseudo: f.pseudo, jugados: f.jugados, aciertos: f.aciertos, creditos: f.creditos, propio: f.propio === true }));
+}
+
+async function borrarCuenta() {
+  const sb = await conectar();
+  const { error: fallo } = await sb.rpc("borrar_cuenta");
+  if (fallo) throw errorCuenta(fallo);
+  await sb.auth.signOut();
+}
+
+async function salirVisitante() {
+  if (modo !== "nube") return;
+  const sb = await conectar();
+  await sb.auth.signOut();
+}
+
 async function alCambiarSesion(funcion) {
   if (modo !== "nube") return;
   const sb = await conectar();
   sb.auth.onAuthStateChange((evento) => funcion(evento));
 }
 
-export { modo, cargar, guardar, marcarPublicado, leerApartado, borrarApartado, subirImagen, borrarImagen, subirIncrustadas, usuario, esCreador, entrar, salir, alCambiarSesion };
+export { modo, cargar, guardar, marcarPublicado, leerApartado, borrarApartado, subirImagen, borrarImagen, subirIncrustadas, usuario, esCreador, entrar, salir, alCambiarSesion, cuenta, registrar, entrarVisitante, guardarPseudo, pronosticar, misPronosticos, clasificacionPronosticos, borrarCuenta, salirVisitante };

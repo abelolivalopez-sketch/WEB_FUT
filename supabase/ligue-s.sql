@@ -333,6 +333,226 @@ $$;
 revoke all on function public.restaurar_ligue(integer) from public, anon;
 grant execute on function public.restaurar_ligue(integer) to authenticated;
 
+alter table public.jugadores add column if not exists descripcion text not null default '' check (char_length(descripcion) <= 600);
+alter table public.partidos add column if not exists cota smallint check (cota between 1 and 99);
+alter table public.partidos add column if not exists valoraciones jsonb check (valoraciones is null or (jsonb_typeof(valoraciones) = 'array' and jsonb_array_length(valoraciones) = 2));
+alter table public.actuaciones add column if not exists amarillas smallint not null default 0 check (amarillas between 0 and 2);
+alter table public.actuaciones add column if not exists rojas smallint not null default 0 check (rojas between 0 and 1);
+alter table public.actuaciones add column if not exists comentario text not null default '' check (char_length(comentario) <= 300);
+alter table public.actuaciones drop constraint if exists actuaciones_check;
+alter table public.actuaciones drop constraint if exists actuaciones_con_dato;
+alter table public.actuaciones add constraint actuaciones_con_dato check (nota is not null or goles > 0 or amarillas > 0 or rojas > 0 or comentario <> '');
+alter table public.premios add column if not exists pronostiqueur text not null default '' check (char_length(pronostiqueur) <= 30);
+
+create table if not exists public.perfiles (
+  id uuid primary key references auth.users (id) on delete cascade,
+  pseudo text not null check (char_length(pseudo) between 3 and 20 and pseudo = btrim(pseudo) and pseudo !~ '[[:cntrl:]<>]'),
+  creado timestamptz not null default now()
+);
+
+create unique index if not exists perfiles_pseudo on public.perfiles (lower(pseudo));
+
+create table if not exists public.pronosticos (
+  usuario uuid not null references public.perfiles (id) on delete cascade,
+  partido text not null check (char_length(partido) between 1 and 80),
+  eleccion text not null check (eleccion in ('local', 'visitante')),
+  creado timestamptz not null default now(),
+  primary key (usuario, partido)
+);
+
+create index if not exists pronosticos_partido on public.pronosticos (partido);
+
+alter table public.perfiles enable row level security;
+alter table public.pronosticos enable row level security;
+revoke all on public.perfiles, public.pronosticos from anon, authenticated;
+grant select on public.perfiles, public.pronosticos to authenticated;
+
+drop policy if exists "leer_propio" on public.perfiles;
+create policy "leer_propio" on public.perfiles for select to authenticated using (id = (select auth.uid()));
+drop policy if exists "leer_propios" on public.pronosticos;
+create policy "leer_propios" on public.pronosticos for select to authenticated using (usuario = (select auth.uid()));
+
+create or replace function public.limpiar_pseudo(p_pseudo text)
+returns text
+language sql
+immutable
+set search_path = ''
+as $$
+  select left(btrim(regexp_replace(coalesce(p_pseudo, ''), '[[:cntrl:]<>]', '', 'g')), 20);
+$$;
+
+revoke all on function public.limpiar_pseudo(text) from public;
+
+create or replace function public.crear_perfil_nuevo()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  base text := public.limpiar_pseudo(new.raw_user_meta_data ->> 'pseudo');
+  final text;
+  intento integer := 0;
+begin
+  if char_length(base) < 3 then
+    base := 'Joueur';
+  end if;
+  final := base;
+  while exists (select 1 from public.perfiles p where lower(p.pseudo) = lower(final)) and intento < 30 loop
+    intento := intento + 1;
+    final := left(base, 16) || '-' || (100 + floor(random() * 900))::integer;
+  end loop;
+  insert into public.perfiles (id, pseudo) values (new.id, final) on conflict (id) do nothing;
+  return new;
+end;
+$$;
+
+revoke all on function public.crear_perfil_nuevo() from public, anon, authenticated;
+
+drop trigger if exists crear_perfil_nuevo on auth.users;
+create trigger crear_perfil_nuevo after insert on auth.users for each row execute function public.crear_perfil_nuevo();
+
+create or replace function public.limpiar_pronosticos()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.local is distinct from old.local or new.visitante is distinct from old.visitante then
+    delete from public.pronosticos x where x.partido = new.id;
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function public.limpiar_pronosticos() from public, anon, authenticated;
+
+drop trigger if exists limpiar_pronosticos on public.partidos;
+create trigger limpiar_pronosticos after update on public.partidos for each row execute function public.limpiar_pronosticos();
+
+create or replace function public.pseudo_libre(p_pseudo text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select char_length(public.limpiar_pseudo(p_pseudo)) >= 3
+     and not exists (select 1 from public.perfiles p where lower(p.pseudo) = lower(public.limpiar_pseudo(p_pseudo)));
+$$;
+
+revoke all on function public.pseudo_libre(text) from public;
+grant execute on function public.pseudo_libre(text) to anon, authenticated;
+
+create or replace function public.guardar_pseudo(p_pseudo text)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  limpio text := public.limpiar_pseudo(p_pseudo);
+begin
+  if auth.uid() is null then
+    raise exception 'sin_sesion' using errcode = '42501';
+  end if;
+  if char_length(limpio) < 3 then
+    raise exception 'pseudo_corto' using errcode = '22023';
+  end if;
+  if exists (select 1 from public.perfiles p where lower(p.pseudo) = lower(limpio) and p.id <> auth.uid()) then
+    raise exception 'pseudo_pris' using errcode = '23505';
+  end if;
+  insert into public.perfiles (id, pseudo) values (auth.uid(), limpio)
+  on conflict (id) do update set pseudo = excluded.pseudo;
+  return limpio;
+end;
+$$;
+
+revoke all on function public.guardar_pseudo(text) from public, anon;
+grant execute on function public.guardar_pseudo(text) to authenticated;
+
+create or replace function public.pronosticar(p_partido text, p_eleccion text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  m public.partidos;
+begin
+  if auth.uid() is null then
+    raise exception 'sin_sesion' using errcode = '42501';
+  end if;
+  if not exists (select 1 from public.perfiles p where p.id = auth.uid()) then
+    raise exception 'sin_perfil' using errcode = '42501';
+  end if;
+  if p_eleccion is null or p_eleccion not in ('local', 'visitante') then
+    raise exception 'eleccion' using errcode = '22023';
+  end if;
+  select * into m from public.partidos x where x.id = p_partido;
+  if not found then
+    raise exception 'partido' using errcode = 'P0002';
+  end if;
+  if m.cota is null or m.goles is not null or ((m.fecha + coalesce(m.hora, time '00:00')) at time zone 'Europe/Paris') <= now() then
+    raise exception 'cerrado' using errcode = '22023';
+  end if;
+  insert into public.pronosticos (usuario, partido, eleccion) values (auth.uid(), p_partido, p_eleccion)
+  on conflict (usuario, partido) do update set eleccion = excluded.eleccion, creado = now();
+end;
+$$;
+
+revoke all on function public.pronosticar(text, text) from public, anon;
+grant execute on function public.pronosticar(text, text) to authenticated;
+
+create or replace function public.clasificacion_pronosticos(p_temporada text)
+returns table (pseudo text, jugados integer, aciertos integer, creditos integer, propio boolean)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  with ajuste as (
+    select coalesce(case when a.sitio ->> 'creditosAcierto' ~ '^\d{1,3}$' then (a.sitio ->> 'creditosAcierto')::integer end, 5) as valor
+    from public.ajustes a
+    where a.id = 1
+  ),
+  filas as (
+    select x.usuario,
+           count(*) filter (where m.goles is not null)::integer as jugados,
+           count(*) filter (where (m.goles[1] > m.goles[2] and x.eleccion = 'local') or (m.goles[2] > m.goles[1] and x.eleccion = 'visitante'))::integer as aciertos
+    from public.pronosticos x
+    join public.partidos m on m.id = x.partido
+    where m.temporada = p_temporada
+    group by x.usuario
+  )
+  select p.pseudo, f.jugados, f.aciertos, f.aciertos * coalesce((select valor from ajuste), 5), f.usuario = auth.uid()
+  from filas f
+  join public.perfiles p on p.id = f.usuario
+  where f.jugados > 0
+  order by 4 desc, f.aciertos desc, f.jugados, lower(p.pseudo);
+$$;
+
+revoke all on function public.clasificacion_pronosticos(text) from public;
+grant execute on function public.clasificacion_pronosticos(text) to anon, authenticated;
+
+create or replace function public.borrar_cuenta()
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'sin_sesion' using errcode = '42501';
+  end if;
+  delete from auth.users u where u.id = auth.uid();
+end;
+$$;
+
+revoke all on function public.borrar_cuenta() from public, anon;
+grant execute on function public.borrar_cuenta() to authenticated;
+
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('ligue-s', 'ligue-s', true, 2097152, array['image/webp', 'image/jpeg', 'image/png'])
 on conflict (id) do update

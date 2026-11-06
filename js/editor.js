@@ -11,7 +11,7 @@ const ERRORES_NOTA = {
   cuarto: "doit aller de 0,25 en 0,25 (par exemple 7, 7,25, 7,5 ou 7,75)"
 };
 
-const SUGERENCIAS_PREMIOS = ["Champion", "Ballon d'or Ligue S", "Meilleur joueur", "Meilleur buteur", "Meilleur gardien", "Meilleur jeune", "Fair-play"];
+const SUGERENCIAS_PREMIOS = ["Champion", "Ballon d'or Ligue S", "Meilleur joueur", "Meilleur buteur", "Meilleur gardien", "Meilleur jeune", "Fair-play", "Meilleur pronostiqueur"];
 
 function campoHtml(c, valor) {
   const id = `campo-${c.nombre}`;
@@ -227,6 +227,7 @@ function editarAjustes(api) {
         { nombre: "derrota", etiqueta: "Points défaite", tipo: "numero", requerido: true, min: 0, max: 10 }
       ],
       { nombre: "minimoNotas", etiqueta: "Matchs notés minimum", tipo: "numero", requerido: true, min: 1, max: 50, ayuda: "Pour entrer dans le classement des meilleurs joueurs, un joueur doit avoir au moins ce nombre de matchs notés dans la saison." },
+      { nombre: "creditosAcierto", etiqueta: "Crédits par bon pronostic", tipo: "numero", requerido: true, min: 1, max: 100, ayuda: "Ce que gagne un visiteur quand il trouve le vainqueur d'un match. Le classement des pronostiqueurs se recalcule avec la nouvelle valeur." },
       { nombre: "responsable", etiqueta: "Organisateur de la ligue", tipo: "texto", maxlength: 120, ayuda: "Affiché en bas du site et dans la politique de confidentialité." },
       { nombre: "correo", etiqueta: "E-mail de contact", tipo: "correo", maxlength: 200, ayuda: "Pour les demandes de retrait de photo ou de vidéo." }
     ],
@@ -245,6 +246,7 @@ function editarAjustes(api) {
           responsable: v.responsable,
           correo: v.correo,
           minimoNotas: entero(v.minimoNotas, 1, 50) ?? 3,
+          creditosAcierto: entero(v.creditosAcierto, 1, 100) ?? 5,
           puntos: { victoria: entero(v.victoria, 0, 10) ?? 3, empate: entero(v.empate, 0, 10) ?? 1, derrota: entero(v.derrota, 0, 10) ?? 0 }
         });
       }, "Paramètres enregistrés");
@@ -322,7 +324,7 @@ function editarJugador(api, { id, equipo }) {
   const plantilla = actual ? d.plantillas.find((p) => p.temporada === t && p.jugador === id) : null;
   const ocupados = new Set(d.plantillas.filter((p) => p.temporada === t).map((p) => p.jugador));
   const antiguos = actual ? [] : d.jugadores.filter((j) => !ocupados.has(j.id)).sort(porNombre);
-  const propios = ["nombre", "puesto", "foto"];
+  const propios = ["nombre", "puesto", "foto", "descripcion"];
   const opciones = opcionesEquipos(d, t);
   if (!opciones.length) {
     api.avisar("Inscris d'abord une équipe dans cette saison.", "error");
@@ -339,9 +341,10 @@ function editarJugador(api, { id, equipo }) {
       ],
       { nombre: "equipo", etiqueta: "Équipe", tipo: "select", requerido: true, opciones },
       { nombre: "foto", etiqueta: "Photo", tipo: "imagen", forma: "retrato", vacio: actual ? iniciales(actual.nombre) : "", ayuda: "Seulement avec l'accord du joueur. Un portrait vertical rend le mieux ; une photo détourée (fond transparent, PNG) donne l'effet du podium." },
+      { nombre: "descripcion", etiqueta: "Description", tipo: "textarea", filas: 3, ayuda: "Quelques mots sur le joueur (600 caractères au plus). Elle s'affiche sur sa fiche et quand on passe sur sa photo dans le terrain d'un match." },
       { nombre: "capitan", etiqueta: "Capitaine de l'équipe", tipo: "casilla" }
     ],
-    valores: { reprendre: "", nombre: actual?.nombre || "", numero: plantilla?.numero ?? "", puesto: actual?.puesto || "", equipo: plantilla?.equipo || equipo || opciones[0][0], foto: actual?.foto || "", capitan: plantilla?.capitan || false },
+    valores: { reprendre: "", nombre: actual?.nombre || "", numero: plantilla?.numero ?? "", puesto: actual?.puesto || "", equipo: plantilla?.equipo || equipo || opciones[0][0], foto: actual?.foto || "", descripcion: actual?.descripcion || "", capitan: plantilla?.capitan || false },
     boton: actual ? "Enregistrer" : "Ajouter le joueur",
     alMontar: (f) => {
       const reprendre = f.elements.reprendre;
@@ -356,12 +359,13 @@ function editarJugador(api, { id, equipo }) {
       const numero = v.numero === "" ? null : entero(v.numero, 0, 99);
       if (numero !== null && d.plantillas.some((p) => p.temporada === t && p.jugador !== jugadorId && p.equipo === v.equipo && p.numero === numero)) return `Le numéro ${numero} est déjà pris dans cette équipe.`;
       if (!v.reprendre && d.jugadores.some((j) => j.id !== id && j.nombre.toLowerCase() === v.nombre.toLowerCase() && !ocupados.has(j.id))) return "Un joueur des saisons passées porte déjà ce nom : choisis-le dans la liste « Joueur » pour garder son historique.";
+      if (v.descripcion.length > 600) return `La description fait ${v.descripcion.length} caractères : 600 au plus.`;
       const foto = v.reprendre ? { url: "", sobra: "" } : await imagenFinal(api, v.foto, actual?.foto, "jugadores");
       return guardarConImagenes(api, [foto], (dd) => {
         let jid = jugadorId;
         if (!v.reprendre) {
           const j = dd.jugadores.find((x) => x.id === id);
-          const datos = { nombre: v.nombre, puesto: v.puesto, foto: foto.url };
+          const datos = { nombre: v.nombre, puesto: v.puesto, foto: foto.url, descripcion: v.descripcion };
           if (j) Object.assign(j, datos);
           else {
             jid = uid();
@@ -402,20 +406,39 @@ function editarPartido(api, id) {
       [
         { nombre: "jornada", etiqueta: "Journée", tipo: "texto", maxlength: 40, placeholder: "Journée 1" },
         { nombre: "lugar", etiqueta: "Lieu", tipo: "texto", maxlength: 80, placeholder: "Terrain 1" }
-      ]
+      ],
+      { nombre: "cota", etiqueta: "Pronostics : cote de l'équipe 1, en %", tipo: "numero", min: 1, max: 99, placeholder: "50", ayuda: "Les chances de victoire de l'équipe 1 selon toi, de 1 à 99 ; l'équipe 2 a le reste. Laisse vide pour garder les pronostics fermés. Ils se ferment seuls au coup d'envoi." }
     ],
-    valores: actual || { local: opciones[0][0], visitante: opciones[1][0], fecha: ultimo?.fecha && ultimo.fecha >= hoyISO() ? ultimo.fecha : "", hora: "", jornada: ultimo?.jornada || "", lugar: ultimo?.lugar || "" },
+    intro: actual ? "Changer une équipe efface les notes et les pronostics déjà faits pour ce match." : "",
+    valores: actual ? { ...actual, cota: actual.cota ?? "" } : { local: opciones[0][0], visitante: opciones[1][0], fecha: ultimo?.fecha && ultimo.fecha >= hoyISO() ? ultimo.fecha : "", hora: "", jornada: ultimo?.jornada || "", lugar: ultimo?.lugar || "", cota: "" },
     boton: actual ? "Enregistrer" : "Ajouter le match",
+    alMontar: (f) => {
+      const ayuda = f.querySelector("#campo-cota-ayuda");
+      const base = ayuda.textContent;
+      const actualizar = () => {
+        const n = entero(f.elements.cota.value, 1, 99);
+        const uno = f.elements.local.selectedOptions[0]?.textContent || "Équipe 1";
+        const dos = f.elements.visitante.selectedOptions[0]?.textContent || "Équipe 2";
+        ayuda.textContent = f.elements.cota.value.trim() && n !== null ? `${uno} ${n} %, ${dos} ${100 - n} %. ${base}` : base;
+      };
+      ["cota", "local", "visitante"].forEach((c) => f.elements[c].addEventListener("input", actualizar));
+      actualizar();
+    },
     alEnviar: (v) => {
       if (v.local === v.visitante) return "Choisis deux équipes différentes.";
-      const datos = { local: v.local, visitante: v.visitante, fecha: v.fecha, hora: v.hora, jornada: v.jornada, lugar: v.lugar };
+      const cota = v.cota === "" ? null : entero(v.cota, 1, 99);
+      if (v.cota !== "" && (cota === null || String(cota) !== String(Number(v.cota)))) return "La cote doit être un nombre entier entre 1 et 99.";
+      const datos = { local: v.local, visitante: v.visitante, fecha: v.fecha, hora: v.hora, jornada: v.jornada, lugar: v.lugar, cota };
       return api.aplicar((dd) => {
         const m = dd.partidos.find((x) => x.id === id);
         if (m) {
           const cambianEquipos = m.local !== datos.local || m.visitante !== datos.visitante;
           Object.assign(m, datos);
-          if (cambianEquipos) dd.actuaciones = dd.actuaciones.filter((a) => a.partido !== id);
-        } else dd.partidos.push({ id: uid(), temporada: t, ...datos, goles: null });
+          if (cambianEquipos) {
+            dd.actuaciones = dd.actuaciones.filter((a) => a.partido !== id);
+            m.valoraciones = null;
+          }
+        } else dd.partidos.push({ id: uid(), temporada: t, ...datos, goles: null, valoraciones: null });
       }, actual ? "Match enregistré" : "Match ajouté");
     }
   });
@@ -429,16 +452,31 @@ function filasHoja(d, m, lado) {
   const fuera = [...previas.keys()].filter((j) => !plantilla.some((p) => p.jugador.id === j)).map((j) => ({ jugador: d.jugadores.find((x) => x.id === j), numero: null })).filter((p) => p.jugador);
   const filas = [...plantilla, ...fuera].map(({ jugador, numero }) => {
     const a = previas.get(jugador.id);
-    return `<div class="hoja-fila">
-      <span class="hoja-nombre">${numero !== null ? `<b>${numero}</b>` : ""}${esc(jugador.nombre)}</span>
-      <input id="n-${esc(jugador.id)}" name="n-${esc(jugador.id)}" type="text" inputmode="decimal" maxlength="5" placeholder="–" value="${a?.nota !== null && a?.nota !== undefined ? esc(nota(a.nota)) : ""}" aria-label="Note de ${esc(jugador.nombre)}" data-jugador="${esc(jugador.id)}" data-lado="${lado}" data-nombre="${esc(jugador.nombre)}" class="hoja-nota">
-      <input id="g-${esc(jugador.id)}" name="g-${esc(jugador.id)}" type="number" min="0" max="20" inputmode="numeric" value="${a?.goles || 0}" aria-label="Buts de ${esc(jugador.nombre)}" data-lado="${lado}" class="hoja-goles">
+    const jid = esc(jugador.id);
+    const nombre = esc(jugador.nombre);
+    return `<div class="hoja-jugador">
+      <div class="hoja-fila">
+        <span class="hoja-nombre">${numero !== null ? `<b>${numero}</b>` : ""}${nombre}</span>
+        <input id="n-${jid}" name="n-${jid}" type="text" inputmode="decimal" maxlength="5" placeholder="–" value="${a?.nota !== null && a?.nota !== undefined ? esc(nota(a.nota)) : ""}" aria-label="Note de ${nombre}" data-jugador="${jid}" data-lado="${lado}" data-nombre="${nombre}" class="hoja-nota">
+        <input id="g-${jid}" name="g-${jid}" type="number" min="0" max="20" inputmode="numeric" value="${a?.goles || 0}" aria-label="Buts de ${nombre}" data-lado="${lado}" class="hoja-goles">
+        <input id="a-${jid}" name="a-${jid}" type="number" min="0" max="2" inputmode="numeric" value="${a?.amarillas || 0}" aria-label="Cartons jaunes de ${nombre}" class="hoja-carton hoja-jaune">
+        <input id="r-${jid}" name="r-${jid}" type="number" min="0" max="1" inputmode="numeric" value="${a?.rojas || 0}" aria-label="Carton rouge de ${nombre}" class="hoja-carton hoja-rouge">
+      </div>
+      <input id="c-${jid}" name="c-${jid}" type="text" maxlength="300" value="${esc(a?.comentario || "")}" placeholder="Commentaire sur son match (facultatif)" aria-label="Commentaire sur le match de ${nombre}" class="hoja-comentario">
     </div>`;
   }).join("");
+  const v = m.valoraciones?.[lado] || { nota: null, texto: "" };
   return `<fieldset class="hoja-bloque" style="--c:${equipo.color}">
     <legend>${esc(equipo.nombre)}</legend>
     <p class="goleadores-cuenta" data-cuenta="${lado}"></p>
-    ${filas ? `<div class="hoja-fila hoja-titulos" aria-hidden="true"><span>Joueur</span><span>Note</span><span>Buts</span></div>${filas}` : `<p class="campo-ayuda">Ajoute les joueurs de l'équipe pour leur donner une note.</p>`}
+    ${filas ? `<div class="hoja-fila hoja-titulos" aria-hidden="true"><span>Joueur</span><span>Note</span><span>Buts</span><span title="Cartons jaunes">J</span><span title="Carton rouge">R</span></div>${filas}` : `<p class="campo-ayuda">Ajoute les joueurs de l'équipe pour leur donner une note.</p>`}
+    <div class="hoja-valoracion">
+      <p class="hoja-valoracion-titulo">Évaluation de l'équipe <span class="opcional">facultatif</span></p>
+      <div class="hoja-valoracion-fila">
+        <input id="vn-${lado}" name="vn-${lado}" type="text" inputmode="decimal" maxlength="5" placeholder="Note" value="${v.nota !== null ? esc(nota(v.nota)) : ""}" aria-label="Note de l'équipe ${esc(equipo.nombre)}" data-nombre="l'équipe ${esc(equipo.nombre)}" class="hoja-nota-equipo">
+        <textarea id="vt-${lado}" name="vt-${lado}" rows="2" maxlength="600" placeholder="Ton avis sur le match de l'équipe" aria-label="Évaluation de l'équipe ${esc(equipo.nombre)}">${esc(v.texto)}</textarea>
+      </div>
+    </div>
   </fieldset>`;
 }
 
@@ -450,7 +488,7 @@ function editarResultado(api, id) {
   const b = d.equipos.find((e) => e.id === m.visitante);
   abrirFormulario({
     titulo: "Feuille de match",
-    intro: `${esc(a.nombre)} contre ${esc(b.nombre)}, ${esc(diaLargo(m.fecha).toLowerCase())}. Donne une note de 0 à 10 à chaque joueur qui a joué (par quarts de point : 6,25, 6,5, 6,75…). Laisse la note vide pour un joueur absent.`,
+    intro: `${esc(a.nombre)} contre ${esc(b.nombre)}, ${esc(diaLargo(m.fecha).toLowerCase())}. Donne une note de 0 à 10 à chaque joueur qui a joué (par quarts de point : 6,25, 6,5, 6,75…), ses buts et ses cartons (J : jaunes, R : rouge). Laisse la note vide pour un joueur absent.`,
     campos: [[
       { nombre: "golesA", etiqueta: `Score ${a.nombre}`, tipo: "numero", requerido: true, min: 0, max: 99 },
       { nombre: "golesB", etiqueta: `Score ${b.nombre}`, tipo: "numero", requerido: true, min: 0, max: 99 }
@@ -470,13 +508,15 @@ function editarResultado(api, id) {
           salida.textContent = `${plural(notas, "joueur noté", "joueurs notés")}, ${total} ${total > 1 ? "buts" : "but"}${marcado === null ? "" : ` sur ${marcado}`}`;
           salida.classList.toggle("es-distinto", marcado !== null && total !== marcado);
         });
-        f.querySelectorAll("input.hoja-nota").forEach((i) => i.classList.toggle("es-invalida", Boolean(leerNota(i.value).error)));
+        f.querySelectorAll("input.hoja-nota, input.hoja-nota-equipo").forEach((i) => i.classList.toggle("es-invalida", Boolean(leerNota(i.value).error)));
       };
       f.addEventListener("input", actualizar);
       actualizar();
       f.querySelector("[data-quitar-resultado]")?.addEventListener("click", async () => {
         await api.aplicar((dd) => {
-          dd.partidos.find((p) => p.id === id).goles = null;
+          const p = dd.partidos.find((x) => x.id === id);
+          p.goles = null;
+          p.valoraciones = null;
           dd.actuaciones = dd.actuaciones.filter((x) => x.partido !== id);
         }, "Feuille effacée");
         cerrar();
@@ -495,8 +535,21 @@ function editarResultado(api, id) {
         const lado = Number(entrada.dataset.lado);
         const jugador = entrada.dataset.jugador;
         const g = entero(datos.get(`g-${jugador}`), 0, 20) || 0;
-        if (leida.vacia && g === 0) continue;
-        filas.push({ id: uid(), partido: id, jugador, equipo: lado === 0 ? m.local : m.visitante, nota: leida.vacia ? null : leida.valor, goles: g });
+        const amarillas = entero(datos.get(`a-${jugador}`), 0, 2) || 0;
+        const rojas = entero(datos.get(`r-${jugador}`), 0, 1) || 0;
+        const comentario = String(datos.get(`c-${jugador}`) || "").trim().slice(0, 300);
+        if (leida.vacia && g === 0 && amarillas === 0 && rojas === 0 && !comentario) continue;
+        filas.push({ id: uid(), partido: id, jugador, equipo: lado === 0 ? m.local : m.visitante, nota: leida.vacia ? null : leida.valor, goles: g, amarillas, rojas, comentario });
+      }
+      const valoraciones = [];
+      for (const lado of [0, 1]) {
+        const entrada = f.elements[`vn-${lado}`];
+        const leida = leerNota(entrada.value);
+        if (leida.error) {
+          entrada.focus();
+          return `La note de ${entrada.dataset.nombre} ${ERRORES_NOTA[leida.error]}.`;
+        }
+        valoraciones.push({ nota: leida.vacia ? null : leida.valor, texto: String(datos.get(`vt-${lado}`) || "").trim().slice(0, 600) });
       }
       const porLado = [m.local, m.visitante].map((e) => filas.filter((x) => x.equipo === e).reduce((s, x) => s + x.goles, 0));
       if (porLado[0] > goles[0] || porLado[1] > goles[1]) return "Il y a plus de buts notés pour les joueurs que de buts marqués.";
@@ -505,7 +558,9 @@ function editarResultado(api, id) {
         if (previas.has(x.jugador)) x.id = previas.get(x.jugador);
       });
       return api.aplicar((dd) => {
-        dd.partidos.find((p) => p.id === id).goles = goles;
+        const p = dd.partidos.find((x) => x.id === id);
+        p.goles = goles;
+        p.valoraciones = valoraciones.some((x) => x.nota !== null || x.texto) ? valoraciones : null;
         dd.actuaciones = [...dd.actuaciones.filter((x) => x.partido !== id), ...filas];
       }, "Feuille de match enregistrée");
     }
@@ -595,24 +650,26 @@ function editarPremio(api, { id, temporada }) {
     intro: sugerenciasPremios(d, t),
     campos: [
       { nombre: "nombre", etiqueta: "Nom du prix", tipo: "texto", requerido: true, maxlength: 80, sugerencias: SUGERENCIAS_PREMIOS, placeholder: "Ballon d'or Ligue S" },
-      { nombre: "tipo", etiqueta: "Remis à", tipo: "select", requerido: true, opciones: [["jugador", "Un joueur"], ["equipo", "Une équipe"]] },
+      { nombre: "tipo", etiqueta: "Remis à", tipo: "select", requerido: true, opciones: [["jugador", "Un joueur"], ["equipo", "Une équipe"], ["pronostiqueur", "Un pronostiqueur"]] },
       { nombre: "jugador", etiqueta: "Joueur", tipo: "select", requerido: true, opciones: [["", "Choisir un joueur"], ...jugadoresT.map((j) => [j.id, j.nombre])] },
       { nombre: "equipo", etiqueta: "Équipe", tipo: "select", requerido: true, opciones: [["", "Choisir une équipe"], ...equiposT.map((e) => [e.id, e.nombre])] },
+      { nombre: "pronostiqueur", etiqueta: "Pseudo du pronostiqueur", tipo: "texto", requerido: true, maxlength: 30, ayuda: "Tel qu'il apparaît dans le classement des pronostiqueurs." },
       { nombre: "detalle", etiqueta: "Précision", tipo: "texto", maxlength: 120, placeholder: "Moyenne 8,12 ou 14 buts" }
     ],
-    valores: { nombre: actual?.nombre || "", tipo: actual?.equipo && !actual?.jugador ? "equipo" : "jugador", jugador: actual?.jugador || "", equipo: actual?.equipo || "", detalle: actual?.detalle || "" },
+    valores: { nombre: actual?.nombre || "", tipo: actual?.pronostiqueur ? "pronostiqueur" : actual?.equipo && !actual?.jugador ? "equipo" : "jugador", jugador: actual?.jugador || "", equipo: actual?.equipo || "", pronostiqueur: actual?.pronostiqueur || "", detalle: actual?.detalle || "" },
     boton: actual ? "Enregistrer" : "Ajouter le prix",
     alMontar: (f) => {
       const alternar = () => {
-        const esJugador = f.elements.tipo.value === "jugador";
-        mostrarCampos(f, ["jugador"], esJugador);
-        mostrarCampos(f, ["equipo"], !esJugador);
+        const tipo = f.elements.tipo.value;
+        mostrarCampos(f, ["jugador"], tipo === "jugador");
+        mostrarCampos(f, ["equipo"], tipo === "equipo");
+        mostrarCampos(f, ["pronostiqueur"], tipo === "pronostiqueur");
       };
       f.elements.tipo.addEventListener("change", alternar);
       alternar();
     },
     alEnviar: (v) => {
-      const datos = { nombre: v.nombre, jugador: v.tipo === "jugador" ? v.jugador : "", equipo: v.tipo === "equipo" ? v.equipo : "", detalle: v.detalle };
+      const datos = { nombre: v.nombre, jugador: v.tipo === "jugador" ? v.jugador : "", equipo: v.tipo === "equipo" ? v.equipo : "", pronostiqueur: v.tipo === "pronostiqueur" ? v.pronostiqueur : "", detalle: v.detalle };
       return api.aplicar((dd) => {
         const p = dd.premios.find((x) => x.id === id);
         if (p) Object.assign(p, datos);
