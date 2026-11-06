@@ -4,8 +4,21 @@ import * as editor from "./editor.js";
 import { normalizar, clasificacion, estadisticas, rankingJugadores, mejoresJugadores, mejoresGoleadores, mejorDe, hoyISO, TEMPORADA_INICIAL } from "./logica.js";
 import { crearEjemplo } from "./ejemplo.js";
 
-const RUTAS = ["inicio", "calendrier", "equipes", "joueurs", "videos", "palmares", "confidentialite", "createur"];
-const TITULOS = { inicio: "", calendrier: "Calendrier", equipes: "Classement", joueurs: "Joueurs", videos: "Vidéos", palmares: "Palmarès", confidentialite: "Politique de confidentialité", createur: "Espace créateur" };
+const RUTAS = ["inicio", "calendrier", "equipes", "joueurs", "pronostics", "videos", "palmares", "confidentialite", "compte", "createur"];
+const TITULOS = { inicio: "", calendrier: "Calendrier", equipes: "Classement", joueurs: "Joueurs", pronostics: "Pronostics", videos: "Vidéos", palmares: "Palmarès", confidentialite: "Politique de confidentialité", compte: "Mon compte", createur: "Espace créateur" };
+const ERRORES_CUENTA = {
+  credenciales: "E-mail ou mot de passe incorrect.",
+  "sin-confirmar": "Confirme d'abord ton adresse e-mail avec le lien reçu, puis connecte-toi.",
+  "correo-usado": "Un compte existe déjà avec cet e-mail. Connecte-toi.",
+  "sin-correo": "Les inscriptions ouvrent très bientôt. Réessaie dans quelques jours.",
+  "clave-debil": "Mot de passe trop faible : au moins 8 caractères.",
+  demasiados: "Trop de tentatives. Réessaie dans quelques minutes.",
+  "pseudo-usado": "Ce pseudo est déjà pris. Choisis-en un autre.",
+  "pseudo-corto": "Le pseudo doit faire au moins 3 caractères.",
+  cerrado: "Les pronostics de ce match sont fermés.",
+  "sin-sesion": "Ta session a expiré. Reconnecte-toi.",
+  red: "Impossible de joindre le serveur. Vérifie ta connexion et réessaie."
+};
 const CLAVE_PUBLICO = "ligue-s:vista-publica";
 const CLAVE_VISTA_LOCAL = "ligue-s:vista";
 
@@ -25,7 +38,12 @@ const estado = {
   ordenJugadores: "nota",
   temporada: null,
   sinConexion: false,
-  pendiente: false
+  pendiente: false,
+  cuenta: null,
+  misPronos: new Map(),
+  clasif: new Map(),
+  pedidas: new Set(),
+  volver: ""
 };
 
 function leerSesion(clave) {
@@ -73,6 +91,7 @@ function ruta() {
   const h = decodeURIComponent(location.hash.slice(1));
   if (h.startsWith("equipe-")) return { nombre: "equipe", id: h.slice(7) };
   if (h.startsWith("joueur-")) return { nombre: "joueur", id: h.slice(7) };
+  if (h.startsWith("match-")) return { nombre: "match", id: h.slice(6) };
   return { nombre: RUTAS.includes(h) ? h : "inicio" };
 }
 
@@ -122,8 +141,45 @@ function contexto() {
     mejores: mejoresJugadores(d, t, ranking),
     goleadores: mejoresGoleadores(d, t, ranking),
     equipos: new Map(d.equipos.map((e) => [e.id, e])),
-    jugadores: new Map(d.jugadores.map((j) => [j.id, j]))
+    jugadores: new Map(d.jugadores.map((j) => [j.id, j])),
+    pronosticos: almacen.modo === "nube",
+    cuenta: estado.cuenta,
+    misPronos: estado.misPronos,
+    clasif: estado.clasif,
+    ahora: new Date()
   };
+}
+
+function clasifNecesarias(r, ctx) {
+  if (!ctx.pronosticos) return [];
+  if (r.nombre === "pronostics") return [ctx.t];
+  if (r.nombre === "compte") return estado.cuenta ? [ctx.actual] : [];
+  if (r.nombre === "palmares") return ctx.d.temporadas.filter((t) => t.id !== ctx.actual).map((t) => t.id);
+  return [];
+}
+
+function pedirClasif(ids) {
+  ids.filter((id) => !estado.clasif.has(id) && !estado.pedidas.has(id)).forEach((id) => {
+    estado.pedidas.add(id);
+    almacen.clasificacionPronosticos(id)
+      .then((lista) => estado.clasif.set(id, lista))
+      .catch(() => estado.clasif.set(id, null))
+      .finally(() => {
+        estado.pedidas.delete(id);
+        pintar();
+      });
+  });
+}
+
+async function refrescarCuenta() {
+  try {
+    estado.cuenta = await almacen.cuenta();
+    estado.misPronos = estado.cuenta ? await almacen.misPronosticos() : new Map();
+  } catch {
+    estado.cuenta = null;
+    estado.misPronos = new Map();
+  }
+  estado.clasif.clear();
 }
 
 function pintar() {
@@ -133,7 +189,7 @@ function pintar() {
     return;
   }
   const ctx = contexto();
-  const activa = r.nombre === "equipe" ? "equipes" : r.nombre === "joueur" ? "joueurs" : r.nombre;
+  const activa = { equipe: "equipes", joueur: "joueurs", match: "calendrier" }[r.nombre] || r.nombre;
   cabeceraEl.innerHTML = vistas.cabecera(ctx, activa);
   barraEl.innerHTML = vistas.barraCreador(ctx) + (estado.sinConexion ? '<p class="aviso-ejemplo">Pas de connexion : tu vois la dernière version enregistrée.</p>' : "");
   const paginas = {
@@ -143,6 +199,9 @@ function pintar() {
     equipe: () => vistas.equipo(ctx, r.id),
     joueurs: () => vistas.jugadores(ctx),
     joueur: () => vistas.jugador(ctx, r.id),
+    match: () => vistas.partido(ctx, r.id),
+    pronostics: () => vistas.pronosticos(ctx),
+    compte: () => vistas.cuenta(ctx),
     videos: () => vistas.videos(ctx),
     palmares: () => vistas.palmares(ctx),
     confidentialite: () => vistas.confidencialidad(ctx),
@@ -150,13 +209,19 @@ function pintar() {
   };
   vistaEl.innerHTML = paginas[r.nombre]();
   pieEl.innerHTML = vistas.pie(ctx);
-  const nombre = r.nombre === "equipe" ? ctx.equipos.get(r.id)?.nombre : r.nombre === "joueur" ? ctx.jugadores.get(r.id)?.nombre : "";
+  const partidoVisto = r.nombre === "match" ? ctx.d.partidos.find((m) => m.id === r.id) : null;
+  const nombre = r.nombre === "equipe" ? ctx.equipos.get(r.id)?.nombre : r.nombre === "joueur" ? ctx.jugadores.get(r.id)?.nombre : partidoVisto ? `${ctx.equipos.get(partidoVisto.local)?.nombre} – ${ctx.equipos.get(partidoVisto.visitante)?.nombre}` : "";
   const titulo = nombre || TITULOS[r.nombre];
   document.title = titulo ? `${titulo} | ${ctx.d.sitio.nombre}` : `${ctx.d.sitio.nombre} | ${ctx.d.sitio.lema || "Foot à 5"}`;
+  pedirClasif(clasifNecesarias(r, ctx));
 }
 
-function alCambiarRuta() {
+function alCambiarRuta(evento) {
   const r = ruta();
+  if (r.nombre === "compte" && evento?.oldURL) {
+    const previo = new URL(evento.oldURL).hash;
+    estado.volver = !estado.cuenta && previo && previo !== "#compte" ? previo : "";
+  }
   if (r.nombre === "createur" && almacen.modo !== "local" && !enlaceCreador()) {
     irAlEnlaceCreador();
     return;
@@ -441,6 +506,79 @@ const api = {
   borrarTemporada
 };
 
+function cerrarMenus(excepto = null) {
+  document.querySelectorAll('.menu-desplegar[aria-expanded="true"]').forEach((b) => {
+    if (b === excepto) return;
+    b.setAttribute("aria-expanded", "false");
+    document.getElementById(b.getAttribute("aria-controls")).hidden = true;
+  });
+}
+
+function alternarMenu(boton) {
+  const abierto = boton.getAttribute("aria-expanded") === "true";
+  cerrarMenus(boton);
+  boton.setAttribute("aria-expanded", String(!abierto));
+  const lista = document.getElementById(boton.getAttribute("aria-controls"));
+  lista.hidden = abierto;
+  if (!abierto) lista.querySelector("a")?.focus();
+}
+
+function cerrarPiones(excepto = null) {
+  document.querySelectorAll(".pion.abierto").forEach((p) => {
+    if (p === excepto) return;
+    p.classList.remove("abierto");
+    p.querySelector(".pion-boton")?.setAttribute("aria-expanded", "false");
+  });
+}
+
+function alternarPion(boton) {
+  const pieza = boton.closest(".pion");
+  const abierto = pieza.classList.toggle("abierto");
+  boton.setAttribute("aria-expanded", String(abierto));
+  cerrarPiones(pieza);
+}
+
+async function pronosticar(boton) {
+  if (!estado.cuenta) {
+    location.hash = "#compte";
+    return;
+  }
+  const id = boton.dataset.id;
+  const valor = boton.dataset.valor;
+  document.querySelectorAll(`[data-accion="pronostiquer"][data-id="${CSS.escape(id)}"]`).forEach((b) => { b.disabled = true; });
+  try {
+    await almacen.pronosticar(id, valor);
+    estado.misPronos.set(id, valor);
+    pintar();
+    avisar("Pronostic enregistré");
+  } catch (error) {
+    pintar();
+    avisar(ERRORES_CUENTA[error?.codigo] || ERRORES_CUENTA.red, "error");
+    if (error?.codigo === "sin-sesion") await refrescarCuenta();
+  }
+}
+
+async function salirCuenta() {
+  await almacen.salirVisitante();
+  await refrescarCuenta();
+  pintar();
+  avisar("Tu es déconnecté");
+}
+
+async function borrarCuenta() {
+  const ok = await editor.confirmar({ titulo: "Supprimer ton compte ?", mensaje: "Ton pseudo, ton adresse e-mail et tous tes pronostics seront effacés. Tu disparais du classement des pronostiqueurs.", boton: "Supprimer mon compte" });
+  if (!ok) return;
+  try {
+    await almacen.borrarCuenta();
+    await refrescarCuenta();
+    location.hash = "#inicio";
+    pintar();
+    avisar("Ton compte a été supprimé");
+  } catch (error) {
+    avisar(ERRORES_CUENTA[error?.codigo] || ERRORES_CUENTA.red, "error");
+  }
+}
+
 const acciones = {
   "modo-creador": () => activarCreador(true),
   "modo-publico": () => activarCreador(false),
@@ -484,9 +622,31 @@ const acciones = {
 const publicas = new Set(["modo-creador", "recargar", "saltar", "reproducir"]);
 
 function alPulsar(evento) {
+  if (!evento.target.closest(".menu-grupo")) cerrarMenus();
+  if (!evento.target.closest(".pion")) cerrarPiones();
   const boton = evento.target.closest("[data-accion]");
   if (!boton) return;
   const accion = boton.dataset.accion;
+  if (accion === "menu") {
+    alternarMenu(boton);
+    return;
+  }
+  if (accion === "pion") {
+    alternarPion(boton);
+    return;
+  }
+  if (accion === "pronostiquer") {
+    pronosticar(boton);
+    return;
+  }
+  if (accion === "salir-cuenta") {
+    salirCuenta();
+    return;
+  }
+  if (accion === "borrar-cuenta") {
+    borrarCuenta();
+    return;
+  }
   if (accion === "filtro") {
     estado.filtro = boton.dataset.valor;
     pintar();
@@ -509,7 +669,80 @@ function alCambiar(evento) {
   document.getElementById("selector-temporada")?.focus();
 }
 
+function irDespuesDeEntrar() {
+  const destino = estado.volver && estado.volver !== "#compte" ? estado.volver : "";
+  estado.volver = "";
+  if (destino) location.hash = destino;
+  else pintar();
+}
+
+async function enviarCuenta(form) {
+  const error = form.querySelector(".form-error");
+  const boton = form.querySelector('button[type="submit"]');
+  const datos = new FormData(form);
+  const valor = (k) => String(datos.get(k) || "").trim();
+  const mostrar = (texto) => {
+    error.textContent = texto;
+    error.hidden = false;
+  };
+  error.hidden = true;
+  const textoBoton = boton.textContent;
+  if (form.id === "form-entrar") {
+    if (!valor("correo") || !datos.get("clave")) return mostrar("Indique ton e-mail et ton mot de passe.");
+  }
+  if (form.id === "form-registro") {
+    if (valor("pseudo").length < 3 || valor("pseudo").length > 20) return mostrar("Le pseudo doit faire de 3 à 20 caractères.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor("correo"))) return mostrar("L'adresse e-mail n'est pas valide.");
+    if (String(datos.get("clave") || "").length < 8) return mostrar("Le mot de passe doit faire au moins 8 caractères.");
+    if (datos.get("acepto") !== "on") return mostrar("Coche la case pour accepter le fonctionnement des pronostics et la politique de confidentialité.");
+  }
+  if (form.id === "form-pseudo" && (valor("pseudo").length < 3 || valor("pseudo").length > 20)) return mostrar("Le pseudo doit faire de 3 à 20 caractères.");
+  boton.disabled = true;
+  boton.textContent = "Un instant…";
+  try {
+    if (form.id === "form-entrar") {
+      await almacen.entrarVisitante(valor("correo"), String(datos.get("clave")));
+      await refrescarCuenta();
+      avisar(`Connecté : bonjour ${estado.cuenta?.pseudo || ""}`);
+      irDespuesDeEntrar();
+      return;
+    }
+    if (form.id === "form-registro") {
+      const r = await almacen.registrar({ pseudo: valor("pseudo"), correo: valor("correo"), clave: String(datos.get("clave")) });
+      if (r.confirmar) {
+        form.reset();
+        mostrar("Compte créé. Ouvre le lien reçu par e-mail pour confirmer ton adresse, puis connecte-toi.");
+        error.classList.add("es-ok");
+        return;
+      }
+      await refrescarCuenta();
+      avisar(`Bienvenue ${estado.cuenta?.pseudo || ""} !`);
+      irDespuesDeEntrar();
+      return;
+    }
+    if (form.id === "form-pseudo") {
+      const nuevo = await almacen.guardarPseudo(valor("pseudo"));
+      estado.cuenta = { ...estado.cuenta, pseudo: nuevo };
+      estado.clasif.clear();
+      pintar();
+      avisar("Pseudo enregistré");
+    }
+  } catch (fallo) {
+    mostrar(ERRORES_CUENTA[fallo?.codigo] || ERRORES_CUENTA.red);
+  } finally {
+    if (document.body.contains(boton)) {
+      boton.disabled = false;
+      boton.textContent = textoBoton;
+    }
+  }
+}
+
 async function alEnviarAcceso(evento) {
+  if (["form-entrar", "form-registro", "form-pseudo"].includes(evento.target.id)) {
+    evento.preventDefault();
+    await enviarCuenta(evento.target);
+    return;
+  }
   if (evento.target.id !== "form-acceso") return;
   evento.preventDefault();
   const form = evento.target;
@@ -565,6 +798,13 @@ async function arrancar() {
   document.addEventListener("submit", alEnviarAcceso);
   document.addEventListener("error", ocultarMiniaturaRota, true);
   window.addEventListener("hashchange", alCambiarRuta);
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const abierto = document.querySelector('.menu-desplegar[aria-expanded="true"]');
+    cerrarMenus();
+    cerrarPiones();
+    abierto?.focus();
+  });
   pintar();
   let carga;
   try {
@@ -584,17 +824,24 @@ async function arrancar() {
   } else if (almacen.modo === "repo") {
     estado.puedeEditar = Boolean(carga.editor);
     estado.usuario = estado.puedeEditar ? await almacen.usuario() : null;
-  } else if (sesion) {
+  } else {
     try {
-      estado.usuario = await almacen.usuario();
-      estado.puedeEditar = Boolean(estado.usuario) && (await almacen.esCreador());
+      if (sesion) {
+        estado.usuario = await almacen.usuario();
+        estado.puedeEditar = Boolean(estado.usuario) && (await almacen.esCreador());
+      }
+      await refrescarCuenta();
       await almacen.alCambiarSesion((evento) => {
-        if (evento === "SIGNED_OUT" && estado.puedeEditar) {
+        if (evento !== "SIGNED_OUT" || (!estado.cuenta && !estado.puedeEditar)) return;
+        estado.cuenta = null;
+        estado.misPronos = new Map();
+        estado.clasif.clear();
+        if (estado.puedeEditar) {
           estado.puedeEditar = false;
           estado.creador = false;
           estado.usuario = null;
-          pintar();
         }
+        pintar();
       });
     } catch {
       estado.puedeEditar = false;

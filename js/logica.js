@@ -24,7 +24,8 @@ const SITIO_BASE = {
   youtube: "https://www.youtube.com/@Ligue.S",
   instagram: "https://www.instagram.com/ligue._s/",
   responsable: "Tom Hallé",
-  correo: ""
+  correo: "",
+  creditosAcierto: 5
 };
 
 const TEMPORADA_INICIAL = { id: "saison-5", nombre: "Saison 5", orden: 5 };
@@ -257,6 +258,12 @@ function migrar(v) {
   };
 }
 
+function valoracionesSeguras(valor) {
+  if (!Array.isArray(valor) || valor.length !== 2) return null;
+  const salida = valor.map((v) => ({ nota: notaSegura(v?.nota), texto: texto(v?.texto, 600) }));
+  return salida.some((v) => v.nota !== null || v.texto) ? salida : null;
+}
+
 function normalizarSitio(s, esquema) {
   const p = s.puntos && typeof s.puntos === "object" ? s.puntos : {};
   const pres = s.presentacion && typeof s.presentacion === "object" ? s.presentacion : {};
@@ -280,7 +287,8 @@ function normalizarSitio(s, esquema) {
     youtube: enlaceSeguro(nuevo("youtube")),
     instagram: enlaceSeguro(nuevo("instagram")),
     responsable: texto(nuevo("responsable"), 120),
-    correo: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(texto(s.correo, 200)) ? texto(s.correo, 200) : ""
+    correo: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(texto(s.correo, 200)) ? texto(s.correo, 200) : "",
+    creditosAcierto: entero(s.creditosAcierto, 1, 100) ?? SITIO_BASE.creditosAcierto
   };
 }
 
@@ -321,7 +329,8 @@ function normalizar(origen) {
     id: unico(j.id),
     nombre: texto(j.nombre, 60),
     puesto: PUESTOS.includes(j.puesto) ? j.puesto : "",
-    foto: imagenSegura(j.foto)
+    foto: imagenSegura(j.foto),
+    descripcion: texto(j.descripcion, 600)
   }));
   const idsJugadores = new Set(jugadores.map((j) => j.id));
 
@@ -363,7 +372,9 @@ function normalizar(origen) {
       visitante: m.visitante,
       jornada: texto(m.jornada, 40),
       lugar: texto(m.lugar, 80),
-      goles
+      goles,
+      cota: entero(m.cota, 1, 99),
+      valoraciones: valoracionesSeguras(m.valoraciones)
     };
   });
   const partidosPorId = new Map(partidos.map((m) => [m.id, m]));
@@ -377,9 +388,12 @@ function normalizar(origen) {
     if (!lados.includes(equipo)) return null;
     const notaFinal = notaSegura(a.nota);
     const goles = entero(a.goles, 0, 99) || 0;
-    if (notaFinal === null && goles === 0) return null;
+    const amarillas = entero(a.amarillas, 0, 2) || 0;
+    const rojas = entero(a.rojas, 0, 1) || 0;
+    const comentario = texto(a.comentario, 300);
+    if (notaFinal === null && goles === 0 && amarillas === 0 && rojas === 0 && !comentario) return null;
     notados.add(clave(a.partido, a.jugador));
-    return { id: unico(a.id), partido: a.partido, jugador: a.jugador, equipo, nota: notaFinal, goles };
+    return { id: unico(a.id), partido: a.partido, jugador: a.jugador, equipo, nota: notaFinal, goles, amarillas, rojas, comentario };
   }).filter(Boolean);
 
   const lives = lista(d.lives).filter((l) => fechaSegura(l.fecha) && idsTemporadas.has(l.temporada)).map((l) => ({
@@ -409,6 +423,7 @@ function normalizar(origen) {
     nombre: texto(p.nombre, 80),
     jugador: idsJugadores.has(p.jugador) ? p.jugador : "",
     equipo: idsEquipos.has(p.equipo) ? p.equipo : "",
+    pronostiqueur: idsJugadores.has(p.jugador) || idsEquipos.has(p.equipo) ? "" : texto(p.pronostiqueur, 30),
     detalle: texto(p.detalle, 120),
     orden: entero(p.orden, 0, 9999) ?? i + 1
   })).sort((a, b) => a.orden - b.orden);
@@ -507,13 +522,15 @@ function estadisticas(d, t, mvps = hombresDelPartido(d, t)) {
   const jugados = new Set(d.partidos.filter((m) => m.temporada === t && m.goles).map((m) => m.id));
   const filas = new Map();
   const fila = (id) => {
-    if (!filas.has(id)) filas.set(id, { pj: 0, notas: 0, suma: 0, goles: 0, mejor: null, mvp: 0, equipo: "" });
+    if (!filas.has(id)) filas.set(id, { pj: 0, notas: 0, suma: 0, goles: 0, amarillas: 0, rojas: 0, mejor: null, mvp: 0, equipo: "" });
     return filas.get(id);
   };
   d.actuaciones.filter((a) => jugados.has(a.partido)).forEach((a) => {
     const f = fila(a.jugador);
     f.pj += 1;
     f.goles += a.goles;
+    f.amarillas += a.amarillas || 0;
+    f.rojas += a.rojas || 0;
     f.equipo = a.equipo;
     if (a.nota !== null) {
       f.notas += 1;
@@ -535,7 +552,7 @@ function rankingJugadores(d, t, stats = estadisticas(d, t)) {
   const equipos = new Map(d.equipos.map((e) => [e.id, e]));
   const plantilla = new Map(d.plantillas.filter((p) => p.temporada === t).map((p) => [p.jugador, p]));
   const ids = new Set([...plantilla.keys(), ...stats.keys()]);
-  const vacio = { pj: 0, notas: 0, goles: 0, media: null, mejor: null, mvp: 0, equipo: "" };
+  const vacio = { pj: 0, notas: 0, goles: 0, amarillas: 0, rojas: 0, media: null, mejor: null, mvp: 0, equipo: "" };
   return [...ids]
     .filter((id) => jugadores.has(id))
     .map((id) => {
@@ -584,7 +601,7 @@ function historialEquipo(d, equipoId) {
 function historialJugador(d, jugadorId) {
   return temporadasDeJugador(d, jugadorId)
     .map((t) => {
-      const s = estadisticas(d, t.id).get(jugadorId) || { pj: 0, notas: 0, goles: 0, media: null, mejor: null, mvp: 0, equipo: "" };
+      const s = estadisticas(d, t.id).get(jugadorId) || { pj: 0, notas: 0, goles: 0, amarillas: 0, rojas: 0, media: null, mejor: null, mvp: 0, equipo: "" };
       const p = d.plantillas.find((x) => x.temporada === t.id && x.jugador === jugadorId);
       return { ...s, temporada: t, equipo: d.equipos.find((e) => e.id === (p?.equipo || s.equipo)), numero: p?.numero ?? null };
     })
@@ -619,6 +636,79 @@ function siguienteLive(d, t, hoy = hoyISO()) {
 
 function siguientePartido(d, t) {
   return d.partidos.filter((m) => m.temporada === t && !m.goles).sort(porFecha)[0] || null;
+}
+
+function resultadoPartido(m) {
+  if (!m?.goles) return null;
+  if (m.goles[0] > m.goles[1]) return "local";
+  if (m.goles[1] > m.goles[0]) return "visitante";
+  return "nul";
+}
+
+function cierrePronostico(m) {
+  const [a, mes, dia] = m.fecha.split("-").map(Number);
+  const [h, min] = (m.hora || "00:00").split(":").map(Number);
+  return new Date(a, mes - 1, dia, h, min);
+}
+
+function pronosticoAbierto(m, ahora = new Date()) {
+  return Boolean(m && m.cota && !m.goles && ahora < cierrePronostico(m));
+}
+
+const ORDEN_LINEAS = { "Défenseur": 0, "Milieu": 1, "Attaquant": 2 };
+
+function repartir(cuantos) {
+  return { 1: [50], 2: [27, 73], 3: [18, 50, 82], 4: [13, 38, 62, 87], 5: [10, 30, 50, 70, 90] }[cuantos] || [];
+}
+
+function alineacionEquipo(candidatos, lado) {
+  const porteros = candidatos.filter((c) => c.jugador.puesto === "Gardien");
+  const portero = porteros[0] || null;
+  const campo = candidatos.filter((c) => c !== portero && c.jugador.puesto !== "Gardien").slice(0, portero ? 4 : 5);
+  const banco = candidatos.filter((c) => c !== portero && !campo.includes(c));
+  const lineas = [[], [], []];
+  const sinPuesto = [];
+  campo.forEach((c) => {
+    const i = ORDEN_LINEAS[c.jugador.puesto];
+    if (i === undefined) sinPuesto.push(c);
+    else lineas[i].push(c);
+  });
+  sinPuesto.forEach((c) => {
+    if (!lineas[0].length) lineas[0].push(c);
+    else if (!lineas[2].length) lineas[2].push(c);
+    else {
+      const menor = lineas.reduce((m, l, i) => (l.length < lineas[m].length ? i : m), 0);
+      lineas[menor].push(c);
+    }
+  });
+  const usadas = lineas.filter((l) => l.length);
+  const xs = { 1: [32], 2: [22, 40], 3: [18, 30, 42] }[usadas.length] || [];
+  const espejo = (x) => (lado === "visitante" ? 100 - x : x);
+  const colocados = [];
+  if (portero) colocados.push({ ...portero, x: espejo(6), y: 50 });
+  usadas.forEach((linea, i) => {
+    const ys = repartir(linea.length);
+    linea.forEach((c, k) => colocados.push({ ...c, x: espejo(xs[i]), y: ys[k] }));
+  });
+  return { campo: colocados, banco };
+}
+
+function alineacion(d, m) {
+  const jugadores = new Map(d.jugadores.map((j) => [j.id, j]));
+  const actuaciones = d.actuaciones.filter((a) => a.partido === m.id);
+  const lado = (equipoId, nombreLado) => {
+    const dorsales = new Map(d.plantillas.filter((p) => p.temporada === m.temporada && p.equipo === equipoId).map((p) => [p.jugador, p]));
+    const base = m.goles
+      ? actuaciones.filter((a) => a.equipo === equipoId).map((a) => ({ jugador: jugadores.get(a.jugador), numero: dorsales.get(a.jugador)?.numero ?? null, capitan: Boolean(dorsales.get(a.jugador)?.capitan), actuacion: a }))
+      : plantillaDe(d, m.temporada, equipoId).map((p) => ({ jugador: p.datos, numero: p.numero, capitan: p.capitan, actuacion: null }));
+    const candidatos = base.filter((c) => c.jugador).sort((a, b) => {
+      const notaA = a.actuacion?.nota ?? -1;
+      const notaB = b.actuacion?.nota ?? -1;
+      return notaB - notaA || (a.numero ?? 999) - (b.numero ?? 999) || porNombre(a.jugador, b.jugador);
+    });
+    return alineacionEquipo(candidatos, nombreLado);
+  };
+  return { local: lado(m.local, "local"), visitante: lado(m.visitante, "visitante") };
 }
 
 function siguienteNombreTemporada(d) {
@@ -678,5 +768,9 @@ export {
   agruparPorDia,
   siguienteLive,
   siguientePartido,
-  siguienteNombreTemporada
+  siguienteNombreTemporada,
+  resultadoPartido,
+  cierrePronostico,
+  pronosticoAbierto,
+  alineacion
 };

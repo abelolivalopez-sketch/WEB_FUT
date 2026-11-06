@@ -3,14 +3,26 @@
 Web de la Ligue S, liga amateur de fútbol 5 organizada por Tom Hallé. Está en francés y Tom la gestiona desde la propia web, con el modo creador.
 
 - **Accueil**: logo, temporada en curso, texto de presentación, reglas y baremo de puntos, próximo partido, calendario y último récap.
-- **Calendrier**: partidos y lives por día, con las pestañas «À venir» y «Résultats». Cada partido jugado enseña el marcador, los goleadores y el hombre del partido (la nota más alta).
+- **Menú**: Accueil, Calendrier, un desplegable **Classements** (Équipes, Joueurs, Pronostiqueurs, Palmarès) y Vidéos. A la derecha, «Connexion» o el pseudo del visitante conectado.
+- **Calendrier**: partidos y lives por día, con las pestañas «À venir» y «Résultats». Cada partido enseña el marcador, los goleadores, el hombre del partido (la nota más alta), la cota y el pronóstico del visitante, y lleva a su ficha.
+- **Fiche du match** (`#match-…`): cabecera con el marcador, pronósticos, un **mini campo** con las fotos de los dos equipos colocados por puesto (al pasar o tocar una foto sale su ficha: nota, goles, tarjetas, comentario de Tom sobre su partido y descripción), suplentes, evaluación de cada equipo, goles y tarjetas, hombre del partido y vídeo.
+- **Pronostiqueurs** (`#pronostics`): reglas del juego, partidos abiertos y clasificación de la temporada por créditos, con podio.
+- **Mon compte** (`#compte`): crear cuenta (pseudo, correo y contraseña) o entrar; después, sus cifras, sus pronósticos, cambiar el pseudo, salir o borrar la cuenta.
 - **Équipes**: clasificación por puntos (J, G, N, P, BP, BC, Diff y forma), tarjetas de los equipos y podio de los tres mejores jugadores por nota media. Cada equipo tiene su página con su foto de grupo, las fichas de los jugadores (nota media en grande), sus partidos y sus temporadas anteriores.
-- **Joueurs**: podio y clasificación de todos los jugadores por nota media (o por goles). Cada jugador tiene su página con su nota en cada partido, su historial por temporadas y los vídeos de sus partidos.
+- **Joueurs**: podio y clasificación de todos los jugadores por nota media (o por goles), con sus tarjetas. Cada jugador tiene su página con su presentación, su nota, goles y tarjetas en cada partido y en total, su historial por temporadas y los vídeos de sus partidos.
 - **Vidéos**: récaps de los lives de YouTube. El reproductor no se carga hasta que se pulsa (youtube-nocookie).
-- **Palmarès**: campeón y premios de cada temporada.
-- **Politique de confidentialité**: derecho a la imagen, notas, RGPD y alojamiento. Pie con YouTube, Instagram, «Organisée par Tom Hallé» y «Site créé par A2WD Studio».
+- **Palmarès**: campeón, premios (también el de mejor pronosticador) y los tres mejores pronosticadores de cada temporada.
+- **Politique de confidentialité**: derecho a la imagen, notas, cuentas y pronósticos, RGPD y alojamiento. Pie con YouTube, Instagram, «Organisée par Tom Hallé» y «Site créé par A2WD Studio».
 
 En Calendrier, Équipes, Joueurs y Vidéos hay un selector para ver las temporadas pasadas. Por defecto sale la temporada en curso.
+
+## Los pronósticos
+
+- Tom pone en cada partido la **cota** del equipo 1 en % (el equipo 2 tiene el resto). Sin cota no hay pronósticos.
+- El visitante con cuenta elige un ganador, sin empate. Puede cambiarlo hasta el saque inicial (fecha y hora del partido, hora de París); luego se cierra.
+- Cada acierto da `creditosAcierto` créditos (5 por defecto, se cambia en «Paramètres»). Un empate no da créditos a nadie.
+- La clasificación es por temporada: créditos, luego aciertos, luego menos partidos jugados. Para la gala, Tom añade el premio «Meilleur pronostiqueur» con el pseudo del ganador.
+- Si Tom cambia un equipo de un partido, se borran los pronósticos de ese partido.
 
 ## Cómo se organizan los datos
 
@@ -20,13 +32,15 @@ Todo está enlazado por identificadores, así que cada dato se escribe una sola 
 | --- | --- | --- |
 | Temporadas | Nombre («Saison 5») y orden | — |
 | Equipos | Nombre, sigla, color, logo y foto de grupo | — |
-| Jugadores | Nombre, puesto y foto | — |
+| Jugadores | Nombre, puesto, foto y descripción | — |
 | Inscripciones | Qué equipos juegan cada temporada | temporada, equipo |
 | Plantillas | En qué equipo juega cada jugador cada temporada, con su dorsal y si es capitán | temporada, equipo, jugador |
-| Partidos | Fecha, hora, equipos, jornada, campo y marcador | temporada, equipos |
-| Actuaciones | La nota (de 0 a 10, de 0,25 en 0,25) y los goles de un jugador en un partido | partido, jugador, equipo |
+| Partidos | Fecha, hora, equipos, jornada, campo, marcador, cota y evaluación de cada equipo (nota y texto) | temporada, equipos |
+| Actuaciones | La nota (de 0 a 10, de 0,25 en 0,25), los goles, las tarjetas (0–2 amarillas, 0–1 roja) y un comentario de un jugador en un partido | partido, jugador, equipo |
 | Lives y vídeos | Directos anunciados y récaps de YouTube | temporada (y partido para los vídeos) |
-| Premios | Nombre del premio, ganador (jugador o equipo) y precisión | temporada, jugador o equipo |
+| Premios | Nombre del premio, ganador (jugador, equipo o pseudo de un pronosticador) y precisión | temporada, jugador o equipo |
+| Perfiles | Pseudo de cada visitante con cuenta (solo Supabase) | cuenta de Supabase |
+| Pronósticos | Equipo elegido por un visitante en un partido (solo Supabase) | perfil, partido |
 
 La clasificación, los goles de cada jugador, las medias, el hombre del partido, el podio, el campeón y los historiales salen de esas tablas. El podio cuenta solo a los jugadores con un mínimo de partidos con nota (3 por defecto, se cambia en «Paramètres»).
 
@@ -36,10 +50,10 @@ Un equipo o un jugador que vuelve otra temporada es el mismo: conserva su ficha,
 
 | Archivo | Qué hace |
 | --- | --- |
-| `index.html` | Página única; las secciones van por `#inicio`, `#calendrier`, `#equipes`, `#equipe-…`, `#joueurs`, `#joueur-…`, `#videos`, `#palmares`, `#confidentialite` y `#createur`. |
-| `config.js` | Dónde se guardan los datos: repositorio de GitHub (ahora), Supabase o solo el navegador. |
-| `datos.json` | Los datos de la liga. Lo escribe la web al guardar; no hay que tocarlo a mano. |
-| `img/` | Fotos y logos subidos desde la web. |
+| `index.html` | Página única; las secciones van por `#inicio`, `#calendrier`, `#match-…`, `#equipes`, `#equipe-…`, `#joueurs`, `#joueur-…`, `#pronostics`, `#compte`, `#videos`, `#palmares`, `#confidentialite` y `#createur`. |
+| `config.js` | Dónde se guardan los datos: Supabase (ahora), repositorio de GitHub o solo el navegador. |
+| `datos.json` | Los datos de la liga del modo repositorio. Con Supabase ya no se usa; se queda como copia de la etapa de prototipo. |
+| `img/` | Fotos y logos subidos en el modo repositorio. Las fotos nuevas van al almacén `ligue-s` de Supabase. |
 | `logo.svg` | Logo oficial de la Ligue S en vector (azul `#1D418F` y blanco), redibujado a partir del JPG oficial. |
 | `icono.svg` | Icono de la pestaña del navegador. |
 | `estilo.css` | Todo el diseño, con modo claro y oscuro. |
@@ -52,40 +66,33 @@ Un equipo o un jugador que vuelve otra temporada es el mismo: conserva su ficha,
 | `js/almacen.js` | Guarda en el repositorio, en Supabase o en el navegador, según `config.js`. |
 | `js/imagen.js` | Reduce las fotos antes de guardarlas (mantiene la transparencia de los PNG recortados). |
 | `js/ejemplo.js` | Las dos temporadas de ejemplo del modo local. |
-| `supabase/ligue-s.sql` | Tablas, permisos, funciones y almacén de fotos para el modo en línea. |
+| `supabase/ligue-s.sql` | Tablas, permisos, funciones, cuentas, pronósticos y almacén de fotos para el modo en línea. |
 | `docs/GUIDE.md` | Guía en francés para Tom. |
 
 ## Cómo se guardan los datos
 
-`config.js` decide dónde se guarda todo:
+`config.js` decide dónde se guarda todo. Si `supabaseUrl` y `supabaseClave` están rellenos, manda Supabase; si no, el repositorio (`github`); sin nada, el navegador.
 
-```js
-window.LIGUE_S = {
-  supabaseUrl: "",
-  supabaseClave: "",
-  github: { usuario: "abelolivalopez-sketch", repositorio: "WEB_FUT", rama: "main" }
-};
-```
+**Supabase (ahora).** Proyecto `djfwsutpipgghprpcxas` (organización A2WD, región de Europa):
 
-**En el repositorio (ahora).** Con `github` relleno y Supabase vacío, los datos viven en el propio repositorio:
+- La gente lee la liga con una sola llamada y ve los cambios en cuanto abre o recarga la página.
+- Tom entra en `…/?createur` con su **correo y contraseña**. Solo los correos de la tabla `creadores` pueden editar.
+- Los visitantes se crean una cuenta para pronosticar. Una cuenta de visitante no puede editar nada.
+- Las fotos nuevas se suben al almacén `ligue-s`. Las que ya estaban en `img/` siguen saliendo de GitHub Pages.
 
-- `datos.json` en la raíz con equipos, jugadores, partidos, notas, temporadas, premios y textos.
-- Las fotos y logos como archivos en `img/jugadores/`, `img/equipos/` e `img/sitio/`.
-- El público lee esos archivos. No ve ningún botón del modo creador ni enlace al espacio creador.
-- Hay dos enlaces. El normal, `https://abelolivalopez-sketch.github.io/WEB_FUT/`, es siempre la web pública, también en el navegador de quien tiene la llave guardada: no usa la llave y lee lo mismo que cualquier visitante. El de creador, `https://abelolivalopez-sketch.github.io/WEB_FUT/?createur`, pide la **llave de GitHub** (ver abajo) la primera vez y luego abre directamente el modo creador. Sin la llave nadie puede guardar nada, aunque conozca ese enlace.
-- Una página copiada desde el modo creador (`…?createur#equipes`) se ve como la web normal para quien no tiene la llave; solo el enlace de creador sin nada detrás enseña el formulario de la llave.
-- Cada vez que se guarda algo, la web hace un commit en `main` («Ligue S : Joueur ajouté», etc.) con `datos.json` y las fotos nuevas. Las fotos que se cambian o se quitan se borran del repositorio en ese mismo commit.
-- Quien edita ve el cambio al instante. El público lo ve cuando GitHub Pages termina de publicar, en uno o dos minutos.
-- Todo queda en el historial del repositorio: para deshacer un cambio basta con revertir su commit en GitHub.
-- Si `datos.json` cambia por otro lado mientras alguien edita (otro aparato, o una subida a mano), la web no lo pisa: avisa y pide recargar. Los cambios de código no molestan.
+**En el repositorio (etapa de prototipo).** Con Supabase vacío y `github` relleno, los datos viven en el propio repositorio:
 
-La primera vez que se entra con la llave en un navegador que ya tenía datos guardados de antes (el modo local), la web los enseña con el aviso «Ces données sont seulement dans ce navigateur» y el botón «Enregistrer sur GitHub», que los sube con sus fotos.
+- `datos.json` en la raíz y las fotos en `img/jugadores/`, `img/equipos/` e `img/sitio/`.
+- Tom entraba en `…/?createur` con una **llave de GitHub** (ver abajo); cada guardado era un commit en `main` y el público lo veía en uno o dos minutos.
+- En este modo no hay cuentas ni pronósticos: la web dice que «ouvriront bientôt».
 
-**Solo en el navegador.** Si en `config.js` se quita `github`, la web vuelve al modo local: cada navegador guarda lo suyo y se publica a mano con «Données › Publier sur le site» y subiendo `datos.json`.
+**Solo en el navegador.** Sin Supabase ni `github`, cada navegador guarda lo suyo (con datos de ejemplo la primera vez) y se publica a mano con «Données › Publier sur le site».
 
-**Supabase (opcional, más adelante).** Con `supabaseUrl` y `supabaseClave` rellenos manda Supabase: login con correo y contraseña y cambios al instante para todos. Los pasos están más abajo. El `datos.json` se pasa con «Données › Importer».
+Los dos enlaces no cambian: `https://abelolivalopez-sketch.github.io/WEB_FUT/` es siempre la web pública, y `https://abelolivalopez-sketch.github.io/WEB_FUT/?createur` el acceso de creador. Una página copiada desde el modo creador (`…?createur#equipes`) se ve como la web normal para quien no es creador.
 
 ## La llave de GitHub
+
+Solo hace falta en el modo repositorio.
 
 1. En GitHub: foto de perfil › *Settings › Developer settings › Personal access tokens › Fine-grained tokens › Generate new token*, o directamente https://github.com/settings/personal-access-tokens/new
 2. Nombre: «Ligue S». Caducidad: la que quieras (cuando caduque, se crea otra igual).
@@ -113,8 +120,9 @@ Cuando se compre el dominio (por ejemplo `ligue-s.fr`), la web sigue en GitHub P
 4. En el repositorio: *Settings › Pages › Custom domain*, escribir el dominio y *Save*. GitHub añade un archivo `CNAME` a `main` con un commit; no hay que tocarlo.
 5. Cuando GitHub lo permita (puede tardar hasta 24 h), marcar *Enforce HTTPS*.
 6. Los enlaces pasan a ser `https://ligue-s.fr/` (público) y `https://ligue-s.fr/?createur` (creador). La dirección de github.io redirige sola al dominio.
-7. La llave se guarda por dirección: en el dominio nuevo hay que pegarla una vez más en cada navegador.
-8. Quitar `<meta name="robots" content="noindex">` de `index.html` cuando la web sea la definitiva, para que salga en Google.
+7. La sesión se guarda por dirección: en el dominio nuevo hay que volver a conectarse en cada navegador (Tom y los visitantes).
+8. En Supabase, *Authentication › URL Configuration*: poner el dominio nuevo en «Site URL».
+9. Quitar `<meta name="robots" content="noindex">` de `index.html` cuando la web sea la definitiva, para que salga en Google.
 
 Si el repositorio se transfiere a la cuenta de Tom, el `CNAME` del registro `www` pasa a ser `<cuenta-de-tom>.github.io` y el dominio se verifica en su cuenta.
 
@@ -130,30 +138,33 @@ El repositorio es `WEB_FUT` (público).
 
 Para actualizarla, se suben los archivos cambiados de la misma forma y GitHub reemplaza los que tienen el mismo nombre. Un archivo que ya no se usa hay que borrarlo a mano en GitHub.
 
-## Activar el modo en línea (Supabase)
+## Supabase
 
-1. Crear un proyecto nuevo en Supabase para la liga, en una región de Europa (por ejemplo París).
-2. *SQL Editor*: pegar `supabase/ligue-s.sql` y ejecutarlo. Se puede ejecutar otra vez sin romper nada. Crea la «Saison 5» como temporada en curso.
-3. *Authentication › Users › Add user*: crear el usuario de Tom con su correo y una contraseña, marcando «Auto Confirm User».
-4. En el *SQL Editor*, darle permiso:
-   ```sql
-   insert into public.creadores (correo) values ('correo-de-tom@ejemplo.com');
-   ```
-5. *Authentication › Sign In / Providers*: desactivar «Allow new users to sign up», para que nadie más pueda crearse una cuenta.
-6. *Authentication › URL Configuration*: en «Site URL», la dirección de la web.
-7. *Project Settings › API Keys*: copiar la URL del proyecto y la clave pública (publishable o anon) en `config.js`:
-   ```js
-   window.LIGUE_S = {
-     supabaseUrl: "https://xxxx.supabase.co",
-     supabaseClave: "sb_publishable_…"
-   };
-   ```
-8. Entrar en `…/?createur` con la cuenta de Tom. Si ya se habían metido datos en modo local, en ese navegador: «Données › Télécharger» antes de rellenar `config.js`, y después, ya conectado, «Données › Importer». Las fotos se suben solas al almacén `ligue-s`.
+El proyecto ya está creado y `supabase/ligue-s.sql` aplicado. El archivo se puede ejecutar otra vez en el *SQL Editor* sin romper nada (por ejemplo, después de cambiarlo).
+
+**Ajustes del panel** (*Authentication › Sign In / Providers › Email*):
+
+- «Allow new users to sign up»: **activado**, para que los visitantes se creen su cuenta.
+- «Confirm email»: **desactivado** por ahora. El correo de Supabase sin configurar solo llega a los miembros de la organización, así que los visitantes no recibirían el enlace. Cuando se configure un SMTP propio (Resend, *Authentication › Emails › SMTP Settings*), se vuelve a activar.
+- *Authentication › URL Configuration*: «Site URL» = la dirección de la web.
+
+**Dar acceso de creador.** Primero se crea la cuenta (desde la web, «Connexion › Créer un compte», o en *Authentication › Users › Add user* con «Auto Confirm User») y **después** se añade el correo:
+
+```sql
+insert into public.creadores (correo) values ('correo@ejemplo.com');
+```
+
+En ese orden nadie puede adelantarse y crearse una cuenta con ese correo. Para quitar el acceso: `delete from public.creadores where correo = '…';`.
+
+**Pasarle el proyecto a Tom.** Tom crea su organización en Supabase e invita a Abel como miembro. Abel, como dueño de A2WD: *Project Settings › General › Transfer project* y elige la organización de Tom. La organización de destino no puede pasar de dos proyectos gratis. El proyecto conserva su identificador, así que `config.js` no debería cambiar (comprobarlo después). Después se añade el correo de Tom a `creadores` y, si se quiere, se quita el de Abel.
 
 Cómo funciona por dentro:
 
 - La gente lee todo con una sola llamada (`leer_ligue`), sin límite de filas.
 - Tom guarda con `guardar_cambios`, que recibe solo las filas nuevas, cambiadas o borradas y las aplica todas juntas (o ninguna). Nadie puede escribir directamente en las tablas.
+- Al crearse una cuenta, un disparador crea su perfil con el pseudo elegido (si ya existe, le añade un número). Cada visitante solo puede leer su perfil y sus pronósticos.
+- Los pronósticos pasan por `pronosticar`, que comprueba en el servidor que el partido tiene cota, no tiene resultado y no ha empezado (hora de París). La clasificación sale de `clasificacion_pronosticos`, que solo devuelve pseudos y cifras, nunca correos.
+- `borrar_cuenta` borra la cuenta, el perfil y los pronósticos del visitante.
 - Cada guardado sube un número de versión. Si Tom tiene la web abierta en dos aparatos, el segundo avisa en vez de pisar los cambios.
 - Antes de cada guardado se hace una copia completa en `ligue_versiones` (se guardan las 60 últimas).
 - Las tablas comprueban los datos por su cuenta: notas de 0 a 10 de 0,25 en 0,25, un jugador en un solo equipo por temporada, partidos solo entre equipos inscritos en esa temporada, enlaces de YouTube válidos, etc.
@@ -179,9 +190,10 @@ Si Supabase no responde, la gente ve la última copia que guardó su navegador.
 
 ## Antes de publicarla de verdad
 
-- Meter los equipos de la Saison 5 (Tom, o Abel con el modo local y luego «Importer»).
+- Meter los equipos de la Saison 5 (ya están los del repositorio).
 - Rellenar en «Paramètres» el correo de contacto (sale en la política de confidentialité). El organizador (Tom Hallé) y los enlaces de YouTube (@Ligue.S) e Instagram (@ligue._s) ya vienen puestos.
 - Que Tom revise el texto de presentación y las reglas (las actuales son un borrador).
 - Quitar `<meta name="robots" content="noindex">` de `index.html` cuando ya no haya datos de ejemplo.
 - Si se cambia de alojamiento (dominio en Cloudflare, por ejemplo), actualizar el párrafo «Hébergement» en `js/vistas.js`.
+- Configurar el SMTP (Resend) y volver a activar «Confirm email».
 - Las fuentes (Saira Extra Condensed y Barlow) se cargan de Google Fonts; la política lo indica. Si se prefiere no depender de Google, se pueden servir desde el propio repo.

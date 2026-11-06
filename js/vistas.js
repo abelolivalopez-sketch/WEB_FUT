@@ -1,5 +1,5 @@
 import { fuenteImagen } from "./imagen.js";
-import { esc, usuarioRed, sigla, tinta, iniciales, plural, ordinal, nota, media, nivelNota, diaLargo, partesDia, fechaCorta, fechaMini, porFecha, porMedia, porGoles, agenda, agruparPorDia, siguienteLive, siguientePartido, plantillaDe, temporadasDeJugador, estadisticas, historialEquipo, historialJugador, campeon } from "./logica.js";
+import { esc, usuarioRed, sigla, tinta, iniciales, plural, ordinal, nota, media, nivelNota, diaLargo, partesDia, fechaCorta, fechaMini, porFecha, porMedia, porGoles, agenda, agruparPorDia, siguienteLive, siguientePartido, plantillaDe, temporadasDeJugador, estadisticas, historialEquipo, historialJugador, campeon, resultadoPartido, pronosticoAbierto, alineacion } from "./logica.js";
 
 const ICONOS = {
   lapiz: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>',
@@ -8,12 +8,24 @@ const ICONOS = {
   hoja: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h7M9 7h4"/></svg>',
   play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="lleno" d="M8 5.5v13l11-6.5z"/></svg>',
   externo: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v6H4V6h6"/></svg>',
-  estrella: '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="lleno" d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z"/></svg>'
+  estrella: '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="lleno" d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z"/></svg>',
+  flecha: '<svg class="flecha" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>',
+  usuario: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>'
 };
 
 const MARCA = '<svg class="marca-svg" viewBox="-45 -61 90 122" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="M0 -61L45 -35L45 35L0 61L-45 35L-45 -35ZM0 -48.5L34 -29L34 -10.2L0 -29.1L-16.3 -20.1L34 10.1L34 29L0 48.5L-34 29L-34 10.2L0 29.1L16.3 20.1L-34 -10.1L-34 -29Z"/></svg>';
 
-const ENLACES_MENU = [["inicio", "Accueil"], ["calendrier", "Calendrier"], ["equipes", "Classement"], ["joueurs", "Joueurs"], ["videos", "Vidéos"]];
+const MENU = [
+  ["inicio", "Accueil"],
+  ["calendrier", "Calendrier"],
+  { id: "classements", titulo: "Classements", enlaces: [["equipes", "Équipes"], ["joueurs", "Joueurs"], ["pronostics", "Pronostiqueurs"], ["palmares", "Palmarès"]] },
+  ["videos", "Vidéos"]
+];
+
+const LINEAS_TERRENO = {
+  h: '<svg class="terreno-lineas lineas-h" viewBox="0 0 160 100" preserveAspectRatio="none" aria-hidden="true"><rect x="2" y="2" width="156" height="96" rx="1"/><line x1="80" y1="2" x2="80" y2="98"/><circle cx="80" cy="50" r="12"/><circle class="lleno" cx="80" cy="50" r="0.9"/><rect x="2" y="26" width="18" height="48"/><rect x="140" y="26" width="18" height="48"/><rect x="0" y="40" width="2" height="20"/><rect x="158" y="40" width="2" height="20"/><circle class="lleno" cx="14" cy="50" r="0.9"/><circle class="lleno" cx="146" cy="50" r="0.9"/></svg>',
+  v: '<svg class="terreno-lineas lineas-v" viewBox="0 0 100 160" preserveAspectRatio="none" aria-hidden="true"><rect x="2" y="2" width="96" height="156" rx="1"/><line x1="2" y1="80" x2="98" y2="80"/><circle cx="50" cy="80" r="12"/><circle class="lleno" cx="50" cy="80" r="0.9"/><rect x="26" y="2" width="48" height="18"/><rect x="26" y="140" width="48" height="18"/><rect x="40" y="0" width="20" height="2"/><rect x="40" y="158" width="20" height="2"/><circle class="lleno" cx="50" cy="14" r="0.9"/><circle class="lleno" cx="50" cy="146" r="0.9"/></svg>'
+};
 
 function img(url) {
   return esc(fuenteImagen(url));
@@ -88,9 +100,21 @@ function paginaCabeza(ctx, titulo, textoCabeza, extra = "", conSelector = true) 
 
 function cabecera(ctx, activa) {
   const { sitio } = ctx.d;
+  const enlace = ([h, t]) => `<a href="#${h}" class="menu-${h}"${h === activa ? ' aria-current="page"' : ""}>${t}</a>`;
+  const items = MENU.map((m) => {
+    if (Array.isArray(m)) return enlace(m);
+    const dentro = m.enlaces.some(([h]) => h === activa);
+    return `<div class="menu-grupo">
+      <button type="button" class="menu-desplegar${dentro ? " es-activo" : ""}" data-accion="menu" aria-expanded="false" aria-controls="menu-${m.id}">${m.titulo}${ICONOS.flecha}</button>
+      <div class="menu-lista" id="menu-${m.id}" hidden>${m.enlaces.map(enlace).join("")}</div>
+    </div>`;
+  }).join("");
+  const cuenta = ctx.pronosticos
+    ? `<a href="#compte" class="menu-cuenta"${activa === "compte" ? ' aria-current="page"' : ""} aria-label="${ctx.cuenta ? `Mon compte, ${esc(ctx.cuenta.pseudo)}` : "Se connecter"}">${ICONOS.usuario}<span>${ctx.cuenta ? esc(ctx.cuenta.pseudo) : "Connexion"}</span></a>`
+    : "";
   return `<div class="cabecera-in">
     <a class="marca" href="#inicio" aria-label="${esc(sitio.nombre)}, accueil">${marcaLiga(sitio, "marca-logo")}<span class="marca-nombre">${esc(sitio.nombre)}</span></a>
-    <nav class="menu" aria-label="Sections du site">${ENLACES_MENU.map(([h, t]) => `<a href="#${h}" class="menu-${h}"${h === activa ? ' aria-current="page"' : ""}>${t}</a>`).join("")}</nav>
+    <nav class="menu" aria-label="Sections du site">${items}${cuenta}</nav>
   </div>`;
 }
 
@@ -152,6 +176,7 @@ function filaPartido(ctx, m) {
     : `<span class="tanteo tanteo-hora">${m.hora ? hora(m.hora) : "vs"}</span>`;
   const meta = [m.jornada, m.lugar].filter(Boolean).map((t) => `<span>${esc(t)}</span>`);
   if (!jugado && m.fecha < ctx.hoy) meta.push('<span class="pendiente">Résultat à venir</span>');
+  meta.push(`<a class="enlace-partido" href="#match-${esc(m.id)}">Fiche du match</a>`);
   const goleadores = jugado ? [listaGoleadores(ctx, m, a.id), listaGoleadores(ctx, m, b.id)] : ["", ""];
   const acciones = ctx.creador
     ? herramientas(`${btnCreador("resultado", jugado ? "Modifier la feuille de match" : "Feuille de match", { id: m.id, icono: ICONOS.hoja })}${btnIcono("editar-partido", "Modifier le match", m.id, ICONOS.lapiz)}${btnIcono("borrar-partido", "Supprimer le match", m.id, ICONOS.papelera)}`)
@@ -160,9 +185,70 @@ function filaPartido(ctx, m) {
     <div class="marcador">${ladoEquipo(a, "izq", diferencia === 1)}${centro}${ladoEquipo(b, "der", diferencia === -1)}</div>
     ${goleadores[0] || goleadores[1] ? `<p class="goleadores"><span>${goleadores[0]}</span><span>${goleadores[1]}</span></p>` : ""}
     ${jugado ? lineaMvp(ctx, m) : ""}
+    ${m.cota ? lineaProno(ctx, m) : ""}
     ${meta.length ? `<p class="partido-meta">${meta.join("")}</p>` : ""}
     ${acciones}
   </article>`;
+}
+
+function cotas(ctx, m) {
+  const a = ctx.equipos.get(m.local);
+  const b = ctx.equipos.get(m.visitante);
+  const elegido = ctx.misPronos.get(m.id);
+  return `<div class="cotas" role="img" aria-label="Cote fixée par l'organisateur : ${esc(a.nombre)} ${m.cota} %, ${esc(b.nombre)} ${100 - m.cota} %">
+    <span class="cota${elegido === "local" ? " es-elegida" : ""}" style="${estiloEquipo(a)};flex-grow:${m.cota}"><b>${esc(sigla(a))}</b>${m.cota} %</span>
+    <span class="cota cota-der${elegido === "visitante" ? " es-elegida" : ""}" style="${estiloEquipo(b)};flex-grow:${100 - m.cota}">${100 - m.cota} %<b>${esc(sigla(b))}</b></span>
+  </div>`;
+}
+
+function estadoProno(ctx, m) {
+  const elegido = ctx.misPronos.get(m.id) || "";
+  const resultado = resultadoPartido(m);
+  return { elegido, resultado, abierto: pronosticoAbierto(m, ctx.ahora), acierto: resultado && elegido ? elegido === resultado : null };
+}
+
+function lineaProno(ctx, m) {
+  const e = estadoProno(ctx, m);
+  const equipoElegido = e.elegido ? ctx.equipos.get(e.elegido === "local" ? m.local : m.visitante) : null;
+  let texto = "";
+  if (e.elegido && e.resultado) texto = e.acierto ? `<span class="mi-prono es-acierto">Bien vu : +${plural(ctx.d.sitio.creditosAcierto, "crédit", "crédits")}</span>` : `<span class="mi-prono es-fallo">Pronostic raté</span>`;
+  else if (equipoElegido) texto = `<span class="mi-prono">Ton pronostic : ${placa(equipoElegido)}</span>`;
+  else if (e.abierto && ctx.pronosticos) texto = `<a class="mi-prono es-enlace" href="#match-${esc(m.id)}">Pronostiquer</a>`;
+  return `<div class="partido-prono"><span class="partido-prono-titulo">Pronostics</span>${cotas(ctx, m)}${texto}</div>`;
+}
+
+function botonesProno(ctx, m) {
+  const a = ctx.equipos.get(m.local);
+  const b = ctx.equipos.get(m.visitante);
+  const e = estadoProno(ctx, m);
+  if (!e.abierto) return "";
+  if (!ctx.pronosticos) return '<p class="prono-nota">Les pronostics ouvriront bientôt, avec les comptes visiteurs.</p>';
+  if (!ctx.cuenta) return `<a class="btn btn-principal" href="#compte">Connecte-toi pour pronostiquer</a>`;
+  const boton = (equipo, lado) => `<button type="button" class="prono-boton" style="${estiloEquipo(equipo)}" data-accion="pronostiquer" data-id="${esc(m.id)}" data-valor="${lado}" aria-pressed="${e.elegido === lado}">${placa(equipo)}<span>Victoire ${esc(equipo.nombre)}</span></button>`;
+  return `<div class="prono-botones" role="group" aria-label="Ton pronostic">${boton(a, "local")}${boton(b, "visitante")}</div>`;
+}
+
+function textoProno(ctx, m) {
+  const e = estadoProno(ctx, m);
+  const creditos = plural(ctx.d.sitio.creditosAcierto, "crédit", "crédits");
+  const nombre = (lado) => esc(ctx.equipos.get(lado === "local" ? m.local : m.visitante).nombre);
+  if (e.resultado) {
+    const r = e.resultado === "nul" ? "Match nul : aucun pronostic ne rapporte de crédit." : `Vainqueur : ${nombre(e.resultado)}.`;
+    const propio = !e.elegido ? "" : e.resultado === "nul" ? "" : e.acierto ? ` <strong class="es-acierto">Bien vu, tu gagnes ${creditos}.</strong>` : ` <strong class="es-fallo">Ton pronostic (${nombre(e.elegido)}) est raté.</strong>`;
+    return `${r}${propio}`;
+  }
+  if (!e.abierto) return `Pronostics fermés depuis le coup d'envoi. Résultat à venir.${e.elegido ? ` Ton pronostic : ${nombre(e.elegido)}.` : ""}`;
+  const cierre = `${esc(diaLargo(m.fecha).toLowerCase())}${m.hora ? ` à ${hora(m.hora)}` : ""}`;
+  return `Choisis l'équipe qui va gagner, jusqu'au coup d'envoi (${cierre}). Un bon pronostic rapporte ${creditos}.${e.elegido ? ` Ton pronostic : ${nombre(e.elegido)}. Tu peux encore changer.` : ""}`;
+}
+
+function bloqueProno(ctx, m) {
+  if (!m.cota) return ctx.creador && !m.goles ? `<section class="seccion prono" aria-labelledby="t-prono"><div class="seccion-cabeza"><h2 id="t-prono">Pronostics</h2><p class="seccion-nota">Fixe une cote dans « Modifier le match » pour ouvrir les pronostics de ce match.</p></div>${btnCreador("editar-partido", "Fixer la cote", { id: m.id, icono: ICONOS.lapiz })}</section>` : "";
+  return `<section class="seccion prono" aria-labelledby="t-prono">
+    <div class="seccion-cabeza"><h2 id="t-prono">Pronostics</h2><p class="seccion-nota">${textoProno(ctx, m)}</p></div>
+    <div class="prono-cotas"><span class="prono-etiqueta">Cote fixée par l'organisateur</span>${cotas(ctx, m)}</div>
+    ${botonesProno(ctx, m)}
+  </section>`;
 }
 
 function filaLive(ctx, l) {
@@ -389,6 +475,14 @@ function equipos(ctx) {
   </div>`;
 }
 
+function tarjetas(amarillas, rojas, conCero = false) {
+  const partes = [];
+  if (amarillas) partes.push(`<span class="carton carton-jaune" title="${plural(amarillas, "carton jaune", "cartons jaunes")}"></span>${amarillas > 1 ? `<span class="carton-veces">×${amarillas}</span>` : ""}<span class="sr">${plural(amarillas, "carton jaune", "cartons jaunes")}</span>`);
+  if (rojas) partes.push(`<span class="carton carton-rouge" title="${plural(rojas, "carton rouge", "cartons rouges")}"></span>${rojas > 1 ? `<span class="carton-veces">×${rojas}</span>` : ""}<span class="sr">${plural(rojas, "carton rouge", "cartons rouges")}</span>`);
+  if (!partes.length) return conCero ? "0" : "";
+  return `<span class="cartons">${partes.join("")}</span>`;
+}
+
 function ficha(ctx, p) {
   const j = p.datos;
   const e = ctx.equipos.get(p.equipo);
@@ -404,7 +498,7 @@ function ficha(ctx, p) {
       <h3 class="ficha-nombre"><a href="#joueur-${esc(j.id)}">${esc(j.nombre)}</a></h3>
       <p class="ficha-puesto">${esc(j.puesto || "Joueur")}</p>
       <div class="ficha-nota">${mediaChip(s?.media ?? null)}<span>moyenne</span></div>
-      <p class="ficha-detalle">${plural(s?.pj || 0, "match", "matchs")}, ${plural(s?.goles || 0, "but", "buts")}</p>
+      <p class="ficha-detalle">${plural(s?.pj || 0, "match", "matchs")}, ${plural(s?.goles || 0, "but", "buts")}${tarjetas(s?.amarillas || 0, s?.rojas || 0)}</p>
     </div>
     ${acciones}
   </article>`;
@@ -491,6 +585,7 @@ function filaRanking(ctx, f, puesto) {
     <td class="c-goles">${f.goles}</td>
     <td class="c-op">${f.mejor === null ? "–" : nota(f.mejor)}</td>
     <td class="c-op">${f.mvp}</td>
+    <td class="c-op">${tarjetas(f.amarillas || 0, f.rojas || 0) || "–"}</td>
   </tr>`;
 }
 
@@ -529,6 +624,7 @@ function jugadores(ctx) {
           <th scope="col" class="c-goles">Buts</th>
           <th scope="col" class="c-op"><abbr title="Meilleure note">Max</abbr></th>
           <th scope="col" class="c-op"><abbr title="Homme du match">HdM</abbr></th>
+          <th scope="col" class="c-op">Cartons</th>
         </tr></thead>
         <tbody>${filas.map(([f, p]) => filaRanking(ctx, f, p)).join("")}</tbody>
       </table></div>
@@ -547,7 +643,7 @@ function jugador(ctx, id) {
   const st = suyas.some((t) => t.id === ctx.t) || !suyas.length ? ctx.t : suyas[suyas.length - 1].id;
   const temporada = ctx.d.temporadas.find((t) => t.id === st);
   const stats = st === ctx.t ? ctx.stats : estadisticas(ctx.d, st);
-  const s = stats.get(id) || { pj: 0, notas: 0, goles: 0, media: null, mejor: null, mvp: 0, equipo: "" };
+  const s = stats.get(id) || { pj: 0, notas: 0, goles: 0, amarillas: 0, rojas: 0, media: null, mejor: null, mvp: 0, equipo: "" };
   const p = ctx.d.plantillas.find((x) => x.temporada === st && x.jugador === id);
   const e = ctx.equipos.get(p?.equipo || s.equipo);
   const partidos = new Map(ctx.d.partidos.map((m) => [m.id, m]));
@@ -562,7 +658,8 @@ function jugador(ctx, id) {
     ["Matchs", s.pj],
     ["Buts", s.goles],
     ["Meilleure note", s.mejor === null ? "–" : nota(s.mejor)],
-    ["Homme du match", s.mvp]
+    ["Homme du match", s.mvp],
+    ["Cartons", tarjetas(s.amarillas, s.rojas, true)]
   ];
   const filaMatch = (a) => {
     const rival = ctx.equipos.get(a.m.local === a.equipo ? a.m.visitante : a.m.local);
@@ -572,10 +669,11 @@ function jugador(ctx, id) {
     const mvp = ctx.mvps.get(a.m.id)?.jugador === id;
     return `<tr>
       <td class="c-fecha">${esc(fechaMini(a.m.fecha))}</td>
-      <th scope="row" class="c-equipo"><span class="rival">contre ${placa(rival)}<span class="rival-nombre">${esc(rival?.nombre || "")}</span></span></th>
+      <th scope="row" class="c-equipo"><a class="rival" href="#match-${esc(a.m.id)}">contre ${placa(rival)}<span class="rival-nombre">${esc(rival?.nombre || "")}</span></a></th>
       <td><span class="resultado"><i class="forma-${resultado}">${resultado}</i>${propio}-${contra}</span></td>
       <td>${notaChip(a.nota)}${mvp ? `<span class="mvp-icono" title="Homme du match">${ICONOS.estrella}<span class="sr">Homme du match</span></span>` : ""}</td>
       <td class="c-goles">${a.goles || ""}</td>
+      <td>${tarjetas(a.amarillas || 0, a.rojas || 0)}</td>
     </tr>`;
   };
   const acciones = ctx.creador && p && st === ctx.t ? herramientas(`${btnCreador("editar-jugador", "Modifier le joueur", { id, icono: ICONOS.lapiz })}${btnCreador("borrar-jugador", "Retirer de la saison", { id, icono: ICONOS.papelera })}`, "herramientas-equipo") : "";
@@ -593,10 +691,11 @@ function jugador(ctx, id) {
   </section>
   <div class="contenedor pila">
     <div class="pagina-fila">${selectorTemporada(ctx)}${st !== ctx.t ? `<p class="saison-nota">Pas de match pour ce joueur dans la saison choisie : tu vois la ${esc(temporada?.nombre || "")}.</p>` : ""}</div>
+    ${j.descripcion ? `<section class="seccion" aria-labelledby="t-presentacion"><div class="seccion-cabeza"><h2 id="t-presentacion">Présentation</h2></div><div class="prosa">${parrafos(j.descripcion)}</div></section>` : ""}
     <section class="seccion" aria-labelledby="t-matchs">
       <div class="seccion-cabeza"><h2 id="t-matchs">Ses matchs</h2></div>
       ${actuaciones.length ? `<div class="tabla-marco"><table class="clasif tabla-matchs">
-        <thead><tr><th scope="col" class="c-fecha">Date</th><th scope="col" class="c-equipo">Match</th><th scope="col">Score</th><th scope="col">Note</th><th scope="col" class="c-goles">Buts</th></tr></thead>
+        <thead><tr><th scope="col" class="c-fecha">Date</th><th scope="col" class="c-equipo">Match</th><th scope="col">Score</th><th scope="col">Note</th><th scope="col" class="c-goles">Buts</th><th scope="col">Cartons</th></tr></thead>
         <tbody>${actuaciones.map(filaMatch).join("")}</tbody>
       </table></div>` : vacio("Pas encore de note pour ce joueur cette saison.")}
     </section>
@@ -628,7 +727,9 @@ function tarjetaPremio(ctx, premio) {
   const j = premio.jugador ? ctx.jugadores.get(premio.jugador) : null;
   const plantilla = j ? ctx.d.plantillas.find((p) => p.temporada === premio.temporada && p.jugador === j.id) : null;
   const e = premio.equipo ? ctx.equipos.get(premio.equipo) : plantilla ? ctx.equipos.get(plantilla.equipo) : null;
-  const ganador = j
+  const ganador = premio.pronostiqueur
+    ? `<span class="premio-foto premio-pseudo" style="--c:var(--terrain);--t:var(--sur-terrain)" aria-hidden="true">${esc(iniciales(premio.pronostiqueur))}</span><span class="premio-ganador"><span class="premio-pseudo-nombre">${esc(premio.pronostiqueur)}</span><span class="premio-equipo">Pronostiqueur</span></span>`
+    : j
     ? `${avatar(j, e, "premio-foto")}<span class="premio-ganador"><a href="#joueur-${esc(j.id)}">${esc(j.nombre)}</a>${e ? `<span class="premio-equipo">${placa(e)}<span>${esc(e.nombre)}</span></span>` : ""}</span>`
     : e ? `${escudoEquipo(e, "md")}<span class="premio-ganador"><a href="#equipe-${esc(e.id)}">${esc(e.nombre)}</a></span>` : `<span class="premio-ganador">À décerner</span>`;
   const acciones = ctx.creador ? herramientas(`${btnIcono("editar-premio", "Modifier le prix", premio.id, ICONOS.lapiz)}${btnIcono("borrar-premio", "Supprimer le prix", premio.id, ICONOS.papelera)}`, "herramientas-premio") : "";
@@ -653,6 +754,7 @@ function palmares(ctx) {
         <div class="seccion-cabeza"><h2 id="t-pal-${esc(t.id)}">${esc(t.nombre)}${enCurso ? ' <span class="etiqueta">en cours</span>' : ""}</h2>${ctx.creador ? btnCreador("nuevo-premio", "Ajouter un prix", { id: t.id }) : ""}</div>
         ${ganador && !tienePremioCampeon ? `<a class="campeon" href="#equipe-${esc(ganador.equipo.id)}" style="${estiloEquipo(ganador.equipo)}">${escudoEquipo(ganador.equipo, "md")}<span><span class="campeon-titulo">Champion</span><span class="campeon-nombre">${esc(ganador.equipo.nombre)}</span><span class="campeon-detalle">${plural(ganador.pts, "point", "points")}, ${ganador.g}-${ganador.n}-${ganador.p}</span></span></a>` : ""}
         ${premios.length ? `<div class="premios">${premios.map((p) => tarjetaPremio(ctx, p)).join("")}</div>` : vacio(enCurso ? "Les prix de la saison seront remis à la fin du championnat." : "Aucun prix enregistré pour cette saison.")}
+        ${ctx.pronosticos ? palmaresProno(ctx, t, enCurso) : ""}
       </section>`;
     }).join("")}
   </div>`;
@@ -680,8 +782,12 @@ function confidencialidad(ctx) {
       <h2>Base légale et durée de conservation</h2>
       <p>La publication des photos et des vidéos repose sur le consentement des joueurs. La publication des résultats, des buts, des notes, des classements et du palmarès repose sur l'intérêt légitime de la ligue à présenter ses compétitions. Les fiches restent en ligne pendant la saison et dans l'historique de la ligue, sauf demande de retrait.</p>
 
+      ${nube ? `<h2>Comptes et pronostics</h2>
+      <p>Pour jouer aux pronostics, vous pouvez créer un compte avec un pseudo, une adresse e-mail et un mot de passe. Votre pseudo et vos résultats (pronostics joués, bons pronostics, crédits) apparaissent dans le classement public. Votre adresse e-mail et le détail de vos pronostics ne sont visibles que par vous ; l'organisateur n'y accède que pour la gestion technique du site.</p>
+      <p>Ces données servent uniquement au jeu de pronostics, qui est gratuit et sans argent. Elles sont conservées tant que votre compte existe. Vous pouvez supprimer votre compte à tout moment depuis « Mon compte » : votre pseudo, votre adresse e-mail et vos pronostics sont alors effacés. La base légale est l'exécution du service que vous demandez en créant votre compte. Si vous avez moins de 15 ans, demandez l'accord d'un parent avant de créer un compte.</p>` : ""}
+
       <h2>Votre visite sur le site</h2>
-      <p>Le site ne dépose aucun cookie de suivi, ne mesure pas l'audience et ne demande aucun compte aux visiteurs. Il utilise seulement le stockage local de votre navigateur pour fonctionner${nube ? " (une copie des contenus publics pour s'afficher plus vite et, pour l'organisateur, sa connexion)" : ""}.</p>
+      <p>Le site ne dépose aucun cookie de suivi, ne mesure pas l'audience et ne demande ${nube ? "un compte que pour les pronostics" : "aucun compte aux visiteurs"}. Il utilise seulement le stockage local de votre navigateur pour fonctionner${nube ? " (une copie des contenus publics pour s'afficher plus vite et votre connexion si vous avez un compte)" : ""}.</p>
       <p>Les polices de caractères sont chargées depuis Google Fonts, ce qui transmet votre adresse IP à Google.</p>
 
       <h2>Vidéos YouTube</h2>
@@ -746,6 +852,276 @@ function pie(ctx) {
   </div>`;
 }
 
+function nombreCorto(nombre) {
+  return nombre.length > 14 ? `${nombre.slice(0, 13)}…` : nombre;
+}
+
+function pion(ctx, m, c, e, mvp, stats, enCampo) {
+  const j = c.jugador;
+  const a = c.actuacion;
+  const fid = `ficha-${m.id}-${j.id}`.replace(/[^\w-]/g, "_");
+  const posicion = enCampo ? `--x:${c.x};--y:${c.y};` : "";
+  const clases = ["pion", enCampo ? "en-campo" : "en-banco"];
+  if (enCampo) {
+    clases.push(c.y < 45 ? "h-abajo" : "h-arriba", c.x < 45 ? "v-abajo" : "v-arriba");
+    if (c.x < 24) clases.push("h-izq");
+    if (c.x > 76) clases.push("h-der");
+    if (c.y < 24) clases.push("v-izq");
+    if (c.y > 76) clases.push("v-der");
+  }
+  const s = stats.get(j.id);
+  const marca = a?.rojas ? '<span class="pion-carton carton-rouge" aria-hidden="true"></span>' : a?.amarillas ? '<span class="pion-carton carton-jaune" aria-hidden="true"></span>' : "";
+  const cifras = a
+    ? `<div><dt>Note</dt><dd>${notaChip(a.nota)}</dd></div><div><dt>Buts</dt><dd>${a.goles}</dd></div><div><dt>Cartons</dt><dd>${tarjetas(a.amarillas, a.rojas, true)}</dd></div>`
+    : `<div><dt>Moyenne</dt><dd>${mediaChip(s?.media ?? null)}</dd></div><div><dt>Matchs</dt><dd>${s?.pj || 0}</dd></div><div><dt>Buts</dt><dd>${s?.goles || 0}</dd></div>`;
+  return `<div class="${clases.join(" ")}" style="${posicion}${estiloEquipo(e)}">
+    <button type="button" class="pion-boton" data-accion="pion" aria-expanded="false" aria-describedby="${fid}">
+      <span class="pion-foto">${j.foto ? `<img src="${img(j.foto)}" alt="" loading="lazy">` : `<span aria-hidden="true">${esc(iniciales(j.nombre))}</span>`}</span>
+      <span class="sr">${esc(j.nombre)}</span>
+      ${c.numero !== null ? `<span class="pion-num" aria-hidden="true">${c.numero}</span>` : ""}
+      ${a?.nota !== null && a?.nota !== undefined ? `<span class="pion-nota nota-${nivelNota(a.nota)}" aria-hidden="true">${nota(a.nota)}</span>` : ""}
+      ${mvp === j.id ? `<span class="pion-mvp" title="Homme du match">${ICONOS.estrella}</span>` : ""}
+      ${marca}
+    </button>
+    <span class="pion-nombre" aria-hidden="true">${esc(nombreCorto(j.nombre))}</span>
+    <div class="pion-ficha" id="${fid}" role="tooltip">
+      <div class="pf-cabeza">${avatar(j, e, "pf-foto")}<div class="pf-texto"><strong class="pf-nombre">${c.numero !== null ? `<span>${c.numero}</span>` : ""}${esc(j.nombre)}</strong><span class="pf-sub">${esc([j.puesto, c.capitan ? "Capitaine" : "", e.nombre].filter(Boolean).join(" · "))}</span></div></div>
+      <dl class="pf-cifras">${cifras}</dl>
+      ${a?.comentario ? `<p class="pf-comentario">${esc(a.comentario)}</p>` : ""}
+      ${j.descripcion ? `<p class="pf-descripcion">${esc(j.descripcion)}</p>` : ""}
+      <a class="pf-enlace" href="#joueur-${esc(j.id)}">Voir sa fiche</a>
+    </div>
+  </div>`;
+}
+
+function terreno(ctx, m, al, mvp, stats) {
+  const piezas = [["local", m.local], ["visitante", m.visitante]].flatMap(([lado, eid]) => al[lado].campo.map((c) => pion(ctx, m, c, ctx.equipos.get(eid), mvp, stats, true)));
+  if (!piezas.length) return vacio("Les joueurs apparaîtront ici dès qu'ils seront ajoutés aux équipes.");
+  return `<div class="terreno" role="group" aria-label="Les joueurs sur le terrain">${LINEAS_TERRENO.h}${LINEAS_TERRENO.v}${piezas.join("")}</div>`;
+}
+
+function bancos(ctx, m, al, mvp, stats) {
+  const bloques = [["local", m.local], ["visitante", m.visitante]].filter(([lado]) => al[lado].banco.length).map(([lado, eid]) => {
+    const e = ctx.equipos.get(eid);
+    return `<div class="banco" style="${estiloEquipo(e)}">
+      <p class="banco-titulo">${placa(e)}<span>${m.goles ? "Ont aussi joué" : "Remplaçants"}</span></p>
+      <div class="banco-lista">${al[lado].banco.map((c) => pion(ctx, m, c, e, mvp, stats, false)).join("")}</div>
+    </div>`;
+  });
+  return bloques.length ? `<div class="bancos">${bloques.join("")}</div>` : "";
+}
+
+function valoracionesPartido(ctx, m) {
+  if (!m.valoraciones) return "";
+  const tarjeta = (v, eid) => {
+    const e = ctx.equipos.get(eid);
+    if (v.nota === null && !v.texto) return "";
+    return `<article class="valoracion" style="${estiloEquipo(e)}">
+      <header class="valoracion-cabeza">${placa(e)}<h3>${esc(e.nombre)}</h3>${v.nota !== null ? notaChip(v.nota, "nota-grande") : ""}</header>
+      ${v.texto ? `<div class="prosa">${parrafos(v.texto)}</div>` : ""}
+    </article>`;
+  };
+  return `<section class="seccion" aria-labelledby="t-valoracion">
+    <div class="seccion-cabeza"><h2 id="t-valoracion">Évaluation des équipes</h2><p class="seccion-nota">L'avis de l'organisateur sur le match de chaque équipe.</p></div>
+    <div class="valoraciones">${tarjeta(m.valoraciones[0], m.local)}${tarjeta(m.valoraciones[1], m.visitante)}</div>
+  </section>`;
+}
+
+function resumenPartido(ctx, m) {
+  const lista = ctx.porPartido.get(m.id) || [];
+  const columna = (eid) => {
+    const e = ctx.equipos.get(eid);
+    const propias = lista.filter((a) => a.equipo === eid);
+    const nombre = (a) => `<a href="#joueur-${esc(a.jugador)}">${esc(ctx.jugadores.get(a.jugador)?.nombre || "")}</a>`;
+    const goles = propias.filter((a) => a.goles > 0).sort((x, y) => y.goles - x.goles).map((a) => `<li><span class="ev-but">But${a.goles > 1 ? "s" : ""}</span>${nombre(a)}${a.goles > 1 ? ` <span class="veces">×${a.goles}</span>` : ""}</li>`);
+    const cartones = propias.filter((a) => a.amarillas || a.rojas).map((a) => `<li>${tarjetas(a.amarillas, a.rojas)}${nombre(a)}</li>`);
+    const items = [...goles, ...cartones];
+    return `<div class="resumen-equipo" style="${estiloEquipo(e)}"><h3>${placa(e)}<span>${esc(e.nombre)}</span></h3>${items.length ? `<ul>${items.join("")}</ul>` : '<p class="resumen-vacio">Ni but ni carton.</p>'}</div>`;
+  };
+  return `<section class="seccion" aria-labelledby="t-resumen">
+    <div class="seccion-cabeza"><h2 id="t-resumen">Buts et cartons</h2></div>
+    ${lineaMvp(ctx, m)}
+    <div class="resumen">${columna(m.local)}${columna(m.visitante)}</div>
+  </section>`;
+}
+
+function partido(ctx, id) {
+  const m = ctx.d.partidos.find((x) => x.id === id);
+  if (!m) {
+    return `<div class="contenedor pila"><header class="pagina-cabeza"><h1>Match introuvable</h1><p>Ce match n'existe plus ou le lien est incomplet.</p></header><a class="enlace-mas" href="#calendrier">Voir le calendrier</a></div>`;
+  }
+  const a = ctx.equipos.get(m.local);
+  const b = ctx.equipos.get(m.visitante);
+  const jugado = Boolean(m.goles);
+  const diferencia = jugado ? Math.sign(m.goles[0] - m.goles[1]) : 0;
+  const temporada = ctx.d.temporadas.find((t) => t.id === m.temporada);
+  const meta = [diaLargo(m.fecha), m.hora ? hora(m.hora) : "", m.jornada, m.lugar, m.temporada !== ctx.actual ? temporada?.nombre : ""].filter(Boolean);
+  const stats = m.temporada === ctx.t ? ctx.stats : estadisticas(ctx.d, m.temporada);
+  const al = alineacion(ctx.d, m);
+  const mvp = ctx.mvps.get(m.id)?.jugador || "";
+  const video = ctx.d.videos.find((v) => v.partido === m.id);
+  const lado = (e, clase, ganador) => `<a class="duelo-equipo ${clase}${ganador ? " es-ganador" : ""}" href="#equipe-${esc(e.id)}" style="${estiloEquipo(e)}">${escudoEquipo(e, "md")}<span class="duelo-nombre">${esc(e.nombre)}</span></a>`;
+  const acciones = ctx.creador ? herramientas(`${btnCreador("resultado", jugado ? "Modifier la feuille de match" : "Feuille de match", { id: m.id, icono: ICONOS.hoja })}${btnCreador("editar-partido", "Modifier le match", { id: m.id, icono: ICONOS.lapiz })}${btnCreador("borrar-partido", "Supprimer", { id: m.id, icono: ICONOS.papelera })}`, "herramientas-equipo") : "";
+  return `<section class="partido-cabeza">
+    <div class="partido-cabeza-in">
+      <a class="volver" href="#calendrier">Calendrier</a>
+      <p class="partido-cabeza-meta">${meta.map(esc).join(" · ")}</p>
+      <div class="duelo">
+        ${lado(a, "duelo-izq", diferencia === 1)}
+        <div class="duelo-centro">${jugado ? `<span class="duelo-tanteo" aria-label="Score : ${m.goles[0]} à ${m.goles[1]}"><span>${m.goles[0]}</span><span>${m.goles[1]}</span></span>` : `<span class="duelo-hora">${m.hora ? hora(m.hora) : "vs"}</span>`}</div>
+        ${lado(b, "duelo-der", diferencia === -1)}
+      </div>
+      ${acciones}
+    </div>
+  </section>
+  <div class="contenedor pila">
+    ${bloqueProno(ctx, m)}
+    <section class="seccion" aria-labelledby="t-terreno">
+      <div class="seccion-cabeza"><h2 id="t-terreno">${jugado ? "Les joueurs du match" : "Les équipes"}</h2><p class="seccion-nota">Passe sur un joueur, ou touche sa photo, pour voir sa fiche${jugado ? ", sa note et ses cartons" : ""}.</p></div>
+      ${terreno(ctx, m, al, mvp, stats)}
+      ${bancos(ctx, m, al, mvp, stats)}
+    </section>
+    ${valoracionesPartido(ctx, m)}
+    ${jugado ? resumenPartido(ctx, m) : ""}
+    ${video ? `<section class="seccion" aria-labelledby="t-video-m"><div class="seccion-cabeza"><h2 id="t-video-m">Le récap</h2></div><div class="videos videos-uno">${tarjetaVideo(ctx, video, true)}</div></section>` : ""}
+  </div>`;
+}
+
+function puestos(lista) {
+  return lista.map((f, i) => ({ ...f, puesto: lista.findIndex((o) => o.creditos === f.creditos) + 1 || i + 1 }));
+}
+
+function tablaProno(ctx, lista) {
+  if (lista === undefined) return '<p class="cargando">Chargement du classement…</p>';
+  if (lista === null) return vacio("Le classement n'a pas pu être chargé. Recharge la page pour réessayer.");
+  if (!lista.length) return vacio("Le classement apparaîtra après le premier match pronostiqué.");
+  const filas = puestos(lista);
+  const podio = filas.filter((f) => f.creditos > 0).slice(0, 3);
+  return `${podio.length ? `<ol class="podio-prono">${podio.map((f) => `<li class="pp pp-${Math.min(f.puesto, 3)}${f.propio ? " es-propio" : ""}"><span class="pp-puesto">${f.puesto}</span><span class="pp-pseudo">${esc(f.pseudo)}</span><span class="pp-creditos"><strong>${f.creditos}</strong> crédits</span></li>`).join("")}</ol>` : ""}
+  <div class="tabla-marco"><table class="clasif ranking-prono">
+    <caption class="sr">Classement des pronostiqueurs</caption>
+    <thead><tr><th scope="col" class="c-pos">#</th><th scope="col" class="c-equipo">Pseudo</th><th scope="col"><abbr title="Bons pronostics">Bons</abbr></th><th scope="col"><abbr title="Pronostics joués">Joués</abbr></th><th scope="col" class="c-pts">Crédits</th></tr></thead>
+    <tbody>${filas.map((f) => `<tr${f.propio ? ' class="es-propio"' : ""}><td class="c-pos">${f.puesto}</td><th scope="row" class="c-equipo">${esc(f.pseudo)}${f.propio ? ' <span class="etiqueta">toi</span>' : ""}</th><td>${f.aciertos}</td><td>${f.jugados}</td><td class="c-pts">${f.creditos}</td></tr>`).join("")}</tbody>
+  </table></div>`;
+}
+
+function tarjetaProno(ctx, m) {
+  const a = ctx.equipos.get(m.local);
+  const b = ctx.equipos.get(m.visitante);
+  return `<article class="tarjeta-prono">
+    <a class="tp-equipos" href="#match-${esc(m.id)}">${placa(a)}<span>${esc(a.nombre)}</span><b>vs</b><span>${esc(b.nombre)}</span>${placa(b)}</a>
+    <p class="tp-fecha">${esc(diaLargo(m.fecha))}${m.hora ? ` à ${hora(m.hora)}` : ""}${m.jornada ? ` · ${esc(m.jornada)}` : ""}</p>
+    ${cotas(ctx, m)}
+    ${botonesProno(ctx, m)}
+  </article>`;
+}
+
+function pronosticos(ctx) {
+  const n = plural(ctx.d.sitio.creditosAcierto, "crédit", "crédits");
+  const abiertos = ctx.d.partidos.filter((m) => m.temporada === ctx.t && pronosticoAbierto(m, ctx.ahora)).sort(porFecha);
+  return `<div class="contenedor pila">
+    ${paginaCabeza(ctx, "Pronostics", `Avant chaque match, choisis l'équipe qui va gagner. Chaque bon pronostic rapporte ${n} ; le meilleur pronostiqueur de la saison est récompensé à la remise des prix.`)}
+    <section class="seccion reglas-prono" aria-labelledby="t-como">
+      <div class="seccion-cabeza"><h2 id="t-como">Comment ça marche</h2></div>
+      <ol class="pasos-prono">
+        <li>${ctx.pronosticos && !ctx.cuenta ? '<a href="#compte">Crée ton compte gratuit</a>' : "Crée ton compte gratuit"} avec un pseudo.</li>
+        <li>Sur la fiche d'un match, choisis l'équipe qui va gagner. Tu peux changer d'avis jusqu'au coup d'envoi.</li>
+        <li>Les cotes sont fixées par l'organisateur. Un bon pronostic rapporte ${n} ; un match nul ne rapporte rien.</li>
+        <li>C'est un jeu gratuit, sans argent : les crédits ne s'achètent pas et ne s'échangent pas.</li>
+      </ol>
+    </section>
+    ${!ctx.pronosticos ? vacio("Les pronostics ouvriront bientôt, avec les comptes visiteurs.") : `<section class="seccion" aria-labelledby="t-abiertos">
+      <div class="seccion-cabeza"><h2 id="t-abiertos">Matchs ouverts</h2></div>
+      ${abiertos.length ? `<div class="tarjetas-prono">${abiertos.map((m) => tarjetaProno(ctx, m)).join("")}</div>` : vacio(ctx.creador ? "Aucun match ouvert : fixe une cote dans « Modifier le match » pour ouvrir les pronostics." : "Aucun match ouvert aux pronostics pour l'instant.")}
+    </section>
+    <section class="seccion" aria-labelledby="t-clasif-prono">
+      <div class="seccion-cabeza"><h2 id="t-clasif-prono">Classement</h2><p class="seccion-nota">Crédits gagnés avec les bons pronostics de la ${esc(ctx.temporada.nombre)}.</p></div>
+      ${tablaProno(ctx, ctx.clasif.get(ctx.t))}
+    </section>`}
+  </div>`;
+}
+
+function palmaresProno(ctx, t, enCurso) {
+  if (enCurso) return `<a class="enlace-mas" href="#pronostics">Le classement des pronostiqueurs en cours</a>`;
+  const lista = ctx.clasif.get(t.id);
+  if (!lista || !lista.length) return "";
+  const podio = puestos(lista).filter((f) => f.creditos > 0).slice(0, 3);
+  if (!podio.length) return "";
+  return `<div class="palmares-prono"><h3>Meilleurs pronostiqueurs</h3><ol>${podio.map((f) => `<li><span class="pp-puesto">${f.puesto}</span><span class="pp-pseudo">${esc(f.pseudo)}</span><span class="pp-creditos">${f.creditos} crédits</span></li>`).join("")}</ol></div>`;
+}
+
+function cuenta(ctx) {
+  if (!ctx.pronosticos) {
+    return `<div class="contenedor pila"><header class="pagina-cabeza"><h1>Mon compte</h1><p>Les comptes visiteurs et les pronostics ouvriront bientôt.</p></header></div>`;
+  }
+  if (!ctx.cuenta) {
+    return `<div class="contenedor pila">
+      <header class="pagina-cabeza"><h1>Mon compte</h1><p>Un compte gratuit pour faire tes pronostics et entrer dans le classement des pronostiqueurs.</p></header>
+      <div class="cuenta-formularios">
+        <section class="acceso-caja" aria-labelledby="t-entrar">
+          <h2 id="t-entrar">Se connecter</h2>
+          <form class="formulario" id="form-entrar" novalidate>
+            <label class="campo"><span class="campo-etiqueta">E-mail</span><input name="correo" type="email" autocomplete="username" required></label>
+            <label class="campo"><span class="campo-etiqueta">Mot de passe</span><input name="clave" type="password" autocomplete="current-password" required></label>
+            <p class="form-error" role="alert" hidden></p>
+            <button type="submit" class="btn btn-principal">Se connecter</button>
+          </form>
+        </section>
+        <section class="acceso-caja" aria-labelledby="t-registro">
+          <h2 id="t-registro">Créer un compte</h2>
+          <form class="formulario" id="form-registro" novalidate>
+            <label class="campo"><span class="campo-etiqueta">Pseudo</span><input name="pseudo" type="text" minlength="3" maxlength="20" autocomplete="nickname" required aria-describedby="ayuda-pseudo"><small class="campo-ayuda" id="ayuda-pseudo">Visible dans le classement. De 3 à 20 caractères.</small></label>
+            <label class="campo"><span class="campo-etiqueta">E-mail</span><input name="correo" type="email" autocomplete="email" required aria-describedby="ayuda-correo"><small class="campo-ayuda" id="ayuda-correo">Reste privé.</small></label>
+            <label class="campo"><span class="campo-etiqueta">Mot de passe</span><input name="clave" type="password" minlength="8" autocomplete="new-password" required aria-describedby="ayuda-clave"><small class="campo-ayuda" id="ayuda-clave">Au moins 8 caractères.</small></label>
+            <label class="campo-casilla"><input name="acepto" type="checkbox" required><span>J'accepte le <a href="#pronostics">fonctionnement des pronostics</a> et la <a href="#confidentialite">politique de confidentialité</a>. Moins de 15 ans : avec l'accord d'un parent.</span></label>
+            <p class="form-error" role="alert" hidden></p>
+            <button type="submit" class="btn btn-principal">Créer mon compte</button>
+          </form>
+        </section>
+      </div>
+    </div>`;
+  }
+  const lista = ctx.clasif.get(ctx.actual);
+  const propio = Array.isArray(lista) ? puestos(lista).find((f) => f.propio) : null;
+  const partidos = new Map(ctx.d.partidos.map((m) => [m.id, m]));
+  const mios = [...ctx.misPronos.entries()].map(([pid, eleccion]) => ({ m: partidos.get(pid), eleccion })).filter((x) => x.m && x.m.temporada === ctx.actual).sort((x, y) => porFecha(y.m, x.m));
+  const creditos = ctx.d.sitio.creditosAcierto;
+  const estado = (x) => {
+    const r = resultadoPartido(x.m);
+    if (!r) return '<span class="mi-prono">En attente</span>';
+    if (r === "nul") return '<span class="mi-prono">Match nul</span>';
+    return r === x.eleccion ? `<span class="mi-prono es-acierto">+${creditos}</span>` : '<span class="mi-prono es-fallo">Raté</span>';
+  };
+  const cifras = [["Crédits", propio ? propio.creditos : 0], ["Place", propio ? ordinal(propio.puesto) : "–"], ["Bons pronostics", propio ? propio.aciertos : 0], ["Pronostics", mios.length]];
+  return `<div class="contenedor pila">
+    <header class="pagina-cabeza"><h1>${esc(ctx.cuenta.pseudo)}</h1><p>Connecté avec ${esc(ctx.cuenta.email || "ton compte")}. Tes résultats de la ${esc(ctx.temporadaActual.nombre)}.</p></header>
+    <dl class="cuenta-cifras">${cifras.map(([t, v]) => `<div><dt>${t}</dt><dd>${v}</dd></div>`).join("")}</dl>
+    <section class="seccion" aria-labelledby="t-mios">
+      <div class="seccion-cabeza"><h2 id="t-mios">Mes pronostics</h2><a class="enlace-mas" href="#pronostics">Matchs ouverts et classement</a></div>
+      ${mios.length ? `<div class="tabla-marco"><table class="clasif tabla-matchs">
+        <thead><tr><th scope="col" class="c-fecha">Date</th><th scope="col" class="c-equipo">Match</th><th scope="col">Mon pronostic</th><th scope="col">Résultat</th></tr></thead>
+        <tbody>${mios.map((x) => {
+          const a = ctx.equipos.get(x.m.local);
+          const b = ctx.equipos.get(x.m.visitante);
+          return `<tr><td class="c-fecha">${esc(fechaMini(x.m.fecha))}</td><th scope="row" class="c-equipo"><a class="rival" href="#match-${esc(x.m.id)}">${placa(a)}${x.m.goles ? ` ${x.m.goles[0]}-${x.m.goles[1]} ` : " – "}${placa(b)}</a></th><td>${placa(x.eleccion === "local" ? a : b)}</td><td>${estado(x)}</td></tr>`;
+        }).join("")}</tbody>
+      </table></div>` : vacio("Tu n'as encore fait aucun pronostic cette saison.", '<a class="btn btn-principal" href="#pronostics">Voir les matchs ouverts</a>')}
+    </section>
+    <section class="seccion" aria-labelledby="t-ajustes-cuenta">
+      <div class="seccion-cabeza"><h2 id="t-ajustes-cuenta">Mon compte</h2></div>
+      <form class="formulario acceso-caja" id="form-pseudo" novalidate>
+        <label class="campo"><span class="campo-etiqueta">Pseudo</span><input name="pseudo" type="text" minlength="3" maxlength="20" value="${esc(ctx.cuenta.pseudo)}" required></label>
+        <p class="form-error" role="alert" hidden></p>
+        <button type="submit" class="btn btn-secundario">Changer de pseudo</button>
+      </form>
+      <div class="cuenta-acciones">
+        <button type="button" class="btn btn-secundario" data-accion="salir-cuenta">Se déconnecter</button>
+        <button type="button" class="btn btn-peligro" data-accion="borrar-cuenta">Supprimer mon compte</button>
+      </div>
+    </section>
+  </div>`;
+}
+
 function cargando() {
   return `<div class="contenedor pila"><p class="cargando">Chargement de la ligue…</p></div>`;
 }
@@ -754,4 +1130,4 @@ function errorCarga() {
   return `<div class="contenedor pila"><section class="vacio"><p>Impossible de charger la ligue. Vérifie ta connexion puis recharge la page.</p><button type="button" class="btn btn-principal" data-accion="recargar">Recharger</button></section></div>`;
 }
 
-export { ICONOS, cabecera, barraCreador, inicio, calendario, equipos, equipo, jugadores, jugador, videos, palmares, confidencialidad, acceso, pie, cargando, errorCarga };
+export { ICONOS, cabecera, barraCreador, inicio, calendario, equipos, equipo, jugadores, jugador, partido, pronosticos, cuenta, videos, palmares, confidencialidad, acceso, pie, cargando, errorCarga };

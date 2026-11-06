@@ -61,7 +61,8 @@ function actuacionesDe(azar, partido, plantilla, equipo, marcados, recibidos) {
   return plantilla.filter(() => azar() > 0.08).map((p) => {
     const g = goles.get(p.jugador) || 0;
     const base = 6.25 + p.nivel + resultado + g * 0.5 + (azar() - 0.5) * 2;
-    return { id: `${partido.id}-${p.jugador}`, partido: partido.id, jugador: p.jugador, equipo, nota: cuarto(base), goles: g };
+    const tirada = azar();
+    return { id: `${partido.id}-${p.jugador}`, partido: partido.id, jugador: p.jugador, equipo, nota: cuarto(base), goles: g, amarillas: tirada > 0.86 ? 1 : 0, rojas: tirada > 0.985 ? 1 : 0, comentario: "" };
   });
 }
 
@@ -76,7 +77,7 @@ function crearEjemplo(hoy = new Date()) {
   const nivel = new Map();
   EQUIPOS.forEach(([id, , , , nombres]) => nombres.forEach((nombre, k) => {
     const jid = `ej-${id}-${k + 1}`;
-    jugadores.push({ id: jid, nombre, puesto: PUESTOS_EJEMPLO[k][0], foto: "" });
+    jugadores.push({ id: jid, nombre, puesto: PUESTOS_EJEMPLO[k][0], foto: "", descripcion: k === 0 ? `Le dernier rempart de l'équipe : réflexes, voix et relances rapides.` : k === 4 ? "Capitaine. Toujours le premier à presser et le dernier à lâcher." : "" });
     nivel.set(jid, (azar() - 0.4) * 1.6);
   }));
   const plantillaBase = (equipo, temporada) => jugadores
@@ -112,7 +113,9 @@ function crearEjemplo(hoy = new Date()) {
       const jugada = j < jugadas;
       cruces.forEach(([a, b], k) => {
         const goles = jugada ? [Math.floor(azar() * 6), Math.floor(azar() * 5)] : null;
-        const partido = { id: `${t}-j${j + 1}-${k + 1}`, temporada: t, fecha, hora: HORAS[k], local: equiposT[a], visitante: equiposT[b], jornada: `Journée ${j + 1}`, lugar: k === 1 ? "Terrain 2" : "Terrain 1", goles };
+        const cota = t === "ej-saison-5" ? [55, 40, 62][(j + k) % 3] : null;
+        const valoraciones = goles && k === 0 ? [{ nota: goles[0] >= goles[1] ? 7.5 : 5.75, texto: goles[0] >= goles[1] ? "Bloc solide et beaucoup d'intensité dans les duels." : "Trop de ballons perdus au milieu, mais une belle réaction en fin de match." }, { nota: goles[1] >= goles[0] ? 7 : 5.5, texto: "" }] : null;
+        const partido = { id: `${t}-j${j + 1}-${k + 1}`, temporada: t, fecha, hora: HORAS[k], local: equiposT[a], visitante: equiposT[b], jornada: `Journée ${j + 1}`, lugar: k === 1 ? "Terrain 2" : "Terrain 1", goles, cota, valoraciones };
         partidos.push(partido);
         if (goles) {
           actuaciones.push(...actuacionesDe(azar, partido, plantillaDe(t, equiposT[a]), equiposT[a], goles[0], goles[1]));
