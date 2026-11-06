@@ -1550,7 +1550,11 @@ a.mi-prono { color: var(--vif); }
 .pf-cifras dt { color: var(--gris); font-size: 0.76rem; font-weight: 600; }
 .pf-cifras dd { margin: 0; font-family: var(--f-titre); font-weight: 800; font-size: 1.25rem; line-height: 1.1; }
 .pf-cifras .nota { font-size: 1rem; }
+.pf-bloque { display: grid; gap: 4px; }
+.pf-titulo { color: var(--gris); font-size: 0.76rem; font-weight: 600; }
 .pf-comentario { padding-left: 10px; border-left: 3px solid var(--c); font-size: 0.92rem; font-style: italic; line-height: 1.4; }
+.pf-herramientas { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 10px; border-top: 1px dashed var(--trait); }
+.pf-herramientas .btn-creador { min-height: 34px; padding: 5px 10px; font-size: 0.82rem; }
 .pf-descripcion { color: var(--gris); font-size: 0.9rem; line-height: 1.45; }
 .pf-enlace { justify-self: start; color: var(--vif); font-weight: 700; font-size: 0.92rem; }
 

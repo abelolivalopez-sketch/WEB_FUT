@@ -887,9 +887,10 @@ function pion(ctx, m, c, e, mvp, stats, enCampo) {
     <div class="pion-ficha" id="${fid}" role="tooltip">
       <div class="pf-cabeza">${avatar(j, e, "pf-foto")}<div class="pf-texto"><strong class="pf-nombre">${c.numero !== null ? `<span>${c.numero}</span>` : ""}${esc(j.nombre)}</strong><span class="pf-sub">${esc([j.puesto, c.capitan ? "Capitaine" : "", e.nombre].filter(Boolean).join(" · "))}</span></div></div>
       <dl class="pf-cifras">${cifras}</dl>
-      ${a?.comentario ? `<p class="pf-comentario">${esc(a.comentario)}</p>` : ""}
-      ${j.descripcion ? `<p class="pf-descripcion">${esc(j.descripcion)}</p>` : ""}
+      ${a?.comentario ? `<div class="pf-bloque"><p class="pf-titulo">Son match</p><p class="pf-comentario">${esc(a.comentario)}</p></div>` : ""}
+      ${j.descripcion ? `<div class="pf-bloque"><p class="pf-titulo">Présentation</p><p class="pf-descripcion">${esc(j.descripcion)}</p></div>` : ""}
       <a class="pf-enlace" href="#joueur-${esc(j.id)}">Voir sa fiche</a>
+      ${ctx.creador ? `<div class="pf-herramientas">${m.goles ? btnCreador("comentario-joueur", a?.comentario ? "Modifier le commentaire" : "Écrire un commentaire", { id: `${m.id}|${j.id}`, icono: ICONOS.lapiz }) : ""}${btnCreador("editar-jugador", j.descripcion ? "Modifier la description" : "Écrire une description", { id: j.id, icono: ICONOS.lapiz })}</div>` : ""}
     </div>
   </div>`;
 }

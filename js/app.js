@@ -603,6 +603,7 @@ const acciones = {
   },
   "editar-partido": (id) => editor.editarPartido(api, id),
   resultado: (id) => editor.editarResultado(api, id),
+  "comentario-joueur": (id) => editor.editarComentario(api, id),
   "borrar-partido": (id) => borrar("partido", id),
   "nuevo-live": () => {
     estado.filtro = "proximos";
