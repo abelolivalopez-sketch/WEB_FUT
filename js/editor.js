@@ -567,6 +567,37 @@ function editarResultado(api, id) {
   });
 }
 
+function editarComentario(api, clave) {
+  const [partidoId, jugadorId] = String(clave || "").split("|");
+  const d = api.datos();
+  const m = d.partidos.find((x) => x.id === partidoId);
+  const j = d.jugadores.find((x) => x.id === jugadorId);
+  if (!m || !j || !m.goles) return;
+  const actual = d.actuaciones.find((x) => x.partido === m.id && x.jugador === j.id);
+  const equipo = actual?.equipo || d.plantillas.find((p) => p.temporada === m.temporada && p.jugador === j.id && (p.equipo === m.local || p.equipo === m.visitante))?.equipo;
+  if (!equipo) return;
+  const rival = d.equipos.find((e) => e.id === (equipo === m.local ? m.visitante : m.local));
+  abrirFormulario({
+    titulo: `Commentaire sur ${j.nombre}`,
+    intro: `Son match contre ${esc(rival?.nombre || "")}, ${esc(diaLargo(m.fecha).toLowerCase())}. Le commentaire s'affiche dans sa carte, sur le terrain de la fiche du match.`,
+    campos: [{ nombre: "comentario", etiqueta: "Commentaire", tipo: "textarea", filas: 4, ayuda: "300 caractères au plus. Laisse vide pour l'effacer." }],
+    valores: { comentario: actual?.comentario || "" },
+    alEnviar: (v) => {
+      const texto = v.comentario;
+      if (texto.length > 300) return `Le commentaire fait ${texto.length} caractères : 300 au plus.`;
+      return api.aplicar((dd) => {
+        const fila = dd.actuaciones.find((x) => x.partido === m.id && x.jugador === j.id);
+        if (fila) {
+          fila.comentario = texto;
+          if (fila.nota === null && !fila.goles && !fila.amarillas && !fila.rojas && !texto) dd.actuaciones = dd.actuaciones.filter((x) => x !== fila);
+        } else if (texto) {
+          dd.actuaciones.push({ id: uid(), partido: m.id, jugador: j.id, equipo, nota: null, goles: 0, amarillas: 0, rojas: 0, comentario: texto });
+        }
+      }, texto ? "Commentaire enregistré" : "Commentaire effacé");
+    }
+  });
+}
+
 function editarLive(api, id) {
   const d = api.datos();
   const actual = d.lives.find((l) => l.id === id);
@@ -803,4 +834,4 @@ function prepararDialogo() {
   });
 }
 
-export { prepararDialogo, cerrar, confirmar, editarPresentacion, editarReglas, editarAjustes, editarEquipo, editarJugador, editarPartido, editarResultado, editarLive, editarVideo, editarPremio, gestionarTemporadas, nuevaTemporada, abrirDatos };
+export { prepararDialogo, cerrar, confirmar, editarPresentacion, editarReglas, editarAjustes, editarEquipo, editarJugador, editarPartido, editarResultado, editarComentario, editarLive, editarVideo, editarPremio, gestionarTemporadas, nuevaTemporada, abrirDatos };

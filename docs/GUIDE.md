@@ -74,6 +74,10 @@ Chaque match du calendrier a un lien « Fiche du match ». La page montre le sco
 - Après le match, il montre ceux qui ont joué (ceux qui ont une ligne remplie dans la feuille de match). Ceux qui ne tiennent pas sur le terrain apparaissent dessous, dans « Ont aussi joué ».
 - Sous le terrain : l'évaluation des équipes, les buts et les cartons du match, l'homme du match et la vidéo du match si tu l'as liée.
 
+**Écrire le commentaire d'un joueur, match par match** : en mode créateur, ouvre la fiche du match et passe sur la photo du joueur (ou touche-la). Sa carte montre **Écrire un commentaire** : écris quelques mots sur son match et enregistre. Le commentaire apparaît dans sa carte, sous « Son match », pour tous les visiteurs. Le bouton devient **Modifier le commentaire** ; laisse le texte vide pour l'effacer. Le même commentaire se modifie aussi dans la feuille de match, sur la ligne du joueur. Le bouton n'apparaît qu'une fois le score du match rempli.
+
+Dans la même carte, **Écrire une description** (ou **Modifier la description**) ouvre la fiche du joueur : la description ne dépend pas du match, elle s'affiche sous « Présentation » dans tous ses matchs et sur sa page.
+
 ## Les pronostics
 
 Les visiteurs qui ont un compte devinent le vainqueur de chaque match : une équipe ou l'autre, il n'y a pas de match nul à choisir. C'est un jeu gratuit, sans argent.
