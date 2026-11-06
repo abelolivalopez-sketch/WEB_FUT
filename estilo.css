@@ -1631,6 +1631,8 @@ a.mi-prono { color: var(--vif); }
 .acceso-caja .form-error { margin: 0; }
 .form-error.es-ok { background: color-mix(in srgb, var(--victoire) 14%, var(--papier)); color: var(--encre); }
 .acceso-caja .btn { justify-self: start; }
+.acceso-caja .campo-casilla { flex-wrap: nowrap; align-items: flex-start; }
+.acceso-caja .campo-casilla input { flex: none; margin-top: 2px; }
 .acceso-caja .campo-casilla a { color: var(--vif); }
 #form-pseudo { max-width: 460px; }
 .cuenta-cifras { display: flex; flex-wrap: wrap; gap: 14px 34px; margin: 0; }
