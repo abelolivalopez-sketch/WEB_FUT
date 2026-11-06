@@ -698,15 +698,17 @@ function alineacion(d, m) {
   const actuaciones = d.actuaciones.filter((a) => a.partido === m.id);
   const lado = (equipoId, nombreLado) => {
     const dorsales = new Map(d.plantillas.filter((p) => p.temporada === m.temporada && p.equipo === equipoId).map((p) => [p.jugador, p]));
-    const base = m.goles
-      ? actuaciones.filter((a) => a.equipo === equipoId).map((a) => ({ jugador: jugadores.get(a.jugador), numero: dorsales.get(a.jugador)?.numero ?? null, capitan: Boolean(dorsales.get(a.jugador)?.capitan), actuacion: a }))
+    const filas = m.goles ? actuaciones.filter((a) => a.equipo === equipoId) : [];
+    const jugado = filas.length > 0;
+    const base = jugado
+      ? filas.map((a) => ({ jugador: jugadores.get(a.jugador), numero: dorsales.get(a.jugador)?.numero ?? null, capitan: Boolean(dorsales.get(a.jugador)?.capitan), actuacion: a }))
       : plantillaDe(d, m.temporada, equipoId).map((p) => ({ jugador: p.datos, numero: p.numero, capitan: p.capitan, actuacion: null }));
     const candidatos = base.filter((c) => c.jugador).sort((a, b) => {
       const notaA = a.actuacion?.nota ?? -1;
       const notaB = b.actuacion?.nota ?? -1;
       return notaB - notaA || (a.numero ?? 999) - (b.numero ?? 999) || porNombre(a.jugador, b.jugador);
     });
-    return alineacionEquipo(candidatos, nombreLado);
+    return { ...alineacionEquipo(candidatos, nombreLado), jugado };
   };
   return { local: lado(m.local, "local"), visitante: lado(m.visitante, "visitante") };
 }

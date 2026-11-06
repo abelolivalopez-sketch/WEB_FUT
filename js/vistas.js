@@ -904,7 +904,7 @@ function bancos(ctx, m, al, mvp, stats) {
   const bloques = [["local", m.local], ["visitante", m.visitante]].filter(([lado]) => al[lado].banco.length).map(([lado, eid]) => {
     const e = ctx.equipos.get(eid);
     return `<div class="banco" style="${estiloEquipo(e)}">
-      <p class="banco-titulo">${placa(e)}<span>${m.goles ? "Ont aussi joué" : "Remplaçants"}</span></p>
+      <p class="banco-titulo">${placa(e)}<span>${al[lado].jugado ? "Ont aussi joué" : "Remplaçants"}</span></p>
       <div class="banco-lista">${al[lado].banco.map((c) => pion(ctx, m, c, e, mvp, stats, false)).join("")}</div>
     </div>`;
   });
@@ -1009,7 +1009,7 @@ function tarjetaProno(ctx, m) {
   const a = ctx.equipos.get(m.local);
   const b = ctx.equipos.get(m.visitante);
   return `<article class="tarjeta-prono">
-    <a class="tp-equipos" href="#match-${esc(m.id)}">${placa(a)}<span>${esc(a.nombre)}</span><b>vs</b><span>${esc(b.nombre)}</span>${placa(b)}</a>
+    <a class="tp-equipos" href="#match-${esc(m.id)}"><span class="tp-equipo">${placa(a)}<span class="tp-nombre">${esc(a.nombre)}</span></span><b>vs</b><span class="tp-equipo">${placa(b)}<span class="tp-nombre">${esc(b.nombre)}</span></span></a>
     <p class="tp-fecha">${esc(diaLargo(m.fecha))}${m.hora ? ` à ${hora(m.hora)}` : ""}${m.jornada ? ` · ${esc(m.jornada)}` : ""}</p>
     ${cotas(ctx, m)}
     ${botonesProno(ctx, m)}
